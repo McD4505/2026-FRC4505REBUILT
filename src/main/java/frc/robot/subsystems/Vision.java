@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.simulation.VisionSystemSim;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -37,12 +38,21 @@ public class Vision extends SubsystemBase {
   private double lastVisionTimestamp = 0.0;
   private int lastVisionTagCount = 0;
   private boolean hasVisionPose = false;
-  public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+  /**
+   * April Tag Field Layout of the year.
+   *  */  
+
+  public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
+  /**Photon Vision Simulation */
+  public VisionSystemSim visionSim;
+
   public static final Transform3d kRobotToCam =
                 new Transform3d(new Translation3d(0.5, 0.0, 0.5), new Rotation3d(0, 0, 0));
   PhotonCamera camera;
   PhotonPoseEstimator photonEstimator;
-  /** Creates a new ExampleSubsystem. */
+
+
+
   public Vision(VisionMeasurementConsumer estConsumer) {
      photonEstimator = new PhotonPoseEstimator(kTagLayout, kRobotToCam);
       camera = new PhotonCamera("BandW1");
