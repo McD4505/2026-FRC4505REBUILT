@@ -38,17 +38,20 @@ public class Vision extends SubsystemBase {
   private double lastVisionTimestamp = 0.0;
   private int lastVisionTagCount = 0;
   private boolean hasVisionPose = false;
-  /**
-   * April Tag Field Layout of the year.
-   *  */  
+  
+  // April Tag Field Layout
+  public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
-  public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
-  /**Photon Vision Simulation */
+  // Photon Vision Simulation
   public VisionSystemSim visionSim;
 
   public static final Transform3d kRobotToCam =
                 new Transform3d(new Translation3d(0.5, 0.0, 0.5), new Rotation3d(0, 0, 0));
-  PhotonCamera camera;
+
+
+  PhotonCamera color;
+  PhotonCamera bw1;
+  PhotonCamera bw2;
   PhotonPoseEstimator photonEstimator;
 
 
