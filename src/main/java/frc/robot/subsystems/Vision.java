@@ -9,10 +9,14 @@ import java.util.Optional;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.proto.Photon;
+import org.photonvision.simulation.PhotonCameraSim;
+import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -28,6 +32,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
+
 import java.util.List;
 
 
@@ -38,9 +43,12 @@ public class Vision extends SubsystemBase {
   private double lastVisionTimestamp = 0.0;
   private int lastVisionTagCount = 0;
   private boolean hasVisionPose = false;
+
+  //Transform of the camera rotation and translation relative to the center of the robot
+  private final Transform3d robotToCamTransform;
   
   // April Tag Field Layout
-  public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+  public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
 
   // Photon Vision Simulation
   public VisionSystemSim visionSim;
@@ -48,22 +56,37 @@ public class Vision extends SubsystemBase {
   public static final Transform3d kRobotToCam =
                 new Transform3d(new Translation3d(0.5, 0.0, 0.5), new Rotation3d(0, 0, 0));
 
-
+  // Cameras heheheha
   PhotonCamera color;
   PhotonCamera bw1;
   PhotonCamera bw2;
+  
+  PhotonCameraSim cameraSim;
   PhotonPoseEstimator photonEstimator;
 
 
 
   public Vision(VisionMeasurementConsumer estConsumer) {
      photonEstimator = new PhotonPoseEstimator(kTagLayout, kRobotToCam);
-      camera = new PhotonCamera("BandW1");
+     color = new PhotonCamera("Color");
+      bw1 = new PhotonCamera("BandW1");
+      bw2 = new PhotonCamera("BandW2");
+
+
 
       this.estConsumer = estConsumer;
 
     if (Robot.isSimulation()) {
       initSimField();
+      // Our camera is mounted 0.1 meters forward and 0.5 meters up from the robot pose,
+      // (Robot pose is considered the center of rotation at the floor level, or Z = 0)
+      Translation3d robotToCameraTrl = new Translation3d(0.1, 0, 0.5);
+      // and pitched 15 degrees up.
+      Rotation3d robotToCameraRot = new Rotation3d(0, Math.toRadians(-15), 0);
+      Transform3d robotToCamera = new Transform3d(robotToCameraTrl, robotToCameraRot);
+
+      // Add this camera to the vision system simulation with the given robot-to-camera transform.
+      visionSim.addCamera(cameraSim, robotToCamera);
     }
   }
 
@@ -110,6 +133,32 @@ public class Vision extends SubsystemBase {
   /** Call this in your constructor after fields are constructed */
   private void initSimField() {
     SmartDashboard.putData("Field", simField);
+    // TargetModel targetModel = new TargetModel(0.5, 0.25);
+    // // The pose of where the target is on the field.
+    // // Its rotation determines where "forward" or the target x-axis points.
+    // // Let's say this target is flat against the far wall center, facing the blue driver stations.
+    // Pose3d targetPose = new Pose3d(16, 4, 2, new Rotation3d(0, 0, Math.PI));
+    // // The given target model at the given pose
+    // VisionTargetSim visionTarget = new VisionTargetSim(targetPose, targetModel);
+
+    // Add this vision target to the vision system simulation to make it visible
+    //visionSim.addVisionTargets(visionTarget);
+    visionSim.addAprilTags(kTagLayout);
+    SimCameraProperties cameraProp = new SimCameraProperties();
+    setCamProp(cameraProp);
+    cameraSim = new PhotonCameraSim(bw1, cameraProp);
+  }
+  private void setCamProp(SimCameraProperties cameraProp) {
+    // The simulated camera properties
+    // A 640 x 480 camera with a 100 degree diagonal FOV.
+    cameraProp.setCalibration(640, 480, Rotation2d.fromDegrees(100));
+    // Approximate detection noise with average and standard deviation error in pixels.
+    cameraProp.setCalibError(0.25, 0.08);
+    // Set the camera image capture framerate (Note: this is limited by robot loop rate).
+    cameraProp.setFPS(20);
+    // The average and standard deviation in milliseconds of image data latency.
+    cameraProp.setAvgLatencyMs(35);
+    cameraProp.setLatencyStdDevMs(5);
   }
 
   private Field2d getSimDebugField() {
@@ -169,71 +218,91 @@ public class Vision extends SubsystemBase {
 
     estimationStdDevs = VecBuilder.fill(xy, xy, theta);
   }
+  public void addToVisionSim(VisionSystemSim systemSim)
+    {
+      if (Robot.isSimulation())
+      {
+        systemSim.addCamera(cameraSim, robotToCamTransform);
+      }
+    }
 
 
 @Override
 public void periodic() {
-  Optional<EstimatedRobotPose> lastEst = Optional.empty();
-  int lastTagCount = 0;
+  
+  var result_color = color.getLatestResult();
+  var result_bw1 = bw1.getLatestResult();
+  var result_bw2 = bw2.getLatestResult();
 
-  for (var result : camera.getAllUnreadResults()) {
-    Optional<EstimatedRobotPose> visionEst = photonEstimator.estimateCoprocMultiTagPose(result);
-    if (visionEst.isEmpty()) {
-      visionEst = photonEstimator.estimateLowestAmbiguityPose(result);
-    }
+  boolean hasTargets_color = result_color.hasTargets();
+  boolean hasTargets_bw1 = result_bw1.hasTargets();
+  boolean hasTargets_bw2 = result_bw2.hasTargets();
+  
 
-    updateEstimationStdDevs(visionEst, result.getTargets());
+  
+  // Optional<EstimatedRobotPose> lastEst = Optional.empty();
+  // int lastTagCount = 0;
 
-    if (Robot.isSimulation()) {
-      visionEst.ifPresentOrElse(
-          est ->
-              getSimDebugField()
-                  .getObject("VisionEstimation")
-                  .setPose(est.estimatedPose.toPose2d()),
-          () -> getSimDebugField().getObject("VisionEstimation").setPoses());
-    }
+  // for (var result : color.getAllUnreadResults()) {
+  //   Optional<EstimatedRobotPose> visionEst = photonEstimator.estimateCoprocMultiTagPose(result);
+  //   if (visionEst.isEmpty()) {
+  //     visionEst = photonEstimator.estimateLowestAmbiguityPose(result);
+  //   }
 
-    // Feed drivetrain pose estimator (odometry fusion)
-    visionEst.ifPresent(est -> {
-      var estStdDevs = getEstimationStdDevs();
-      estConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
-    });
+  //   updateEstimationStdDevs(visionEst, result.getTargets());
 
-    // Save only the newest one for dashboard output
-    if (visionEst.isPresent()) {
+  //   if (Robot.isSimulation()) {
+  //     visionEst.ifPresentOrElse(
+  //         est ->
+  //             getSimDebugField()
+  //                 .getObject("VisionEstimation")
+  //                 .setPose(est.estimatedPose.toPose2d()),
+  //         () -> getSimDebugField().getObject("VisionEstimation").setPoses());
+  //   }
+
+  //   // Feed drivetrain pose estimator (odometry fusion)
+  //   visionEst.ifPresent(est -> {
+  //     var estStdDevs = getEstimationStdDevs();
+  //     estConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
+  //   });
+
+  //   // Save only the newest one for dashboard output
+  //   if (visionEst.isPresent()) {
      
-      var est = visionEst.get();
-      var pose2d = est.estimatedPose.toPose2d();
-      estConsumer.accept(pose2d, est.timestampSeconds, getEstimationStdDevs());
-      hasVisionPose = true;
-      lastVisionX = pose2d.getX();
-      lastVisionY = pose2d.getY();
-      lastVisionHeadingDeg = pose2d.getRotation().getDegrees();
-      lastVisionTimestamp = est.timestampSeconds;
-      lastVisionTagCount = result.getTargets().size();
-    }
-  }
-  SmartDashboard.putBoolean("VisionPose/HasPose", hasVisionPose);
-  // Dashboard output ONCE (latest estimate)
-  if (hasVisionPose) {
-    SmartDashboard.putNumber("VisionPose/X", lastVisionX);
-    SmartDashboard.putNumber("VisionPose/Y", lastVisionY);
-    SmartDashboard.putNumber("VisionPose/HeadingDeg", lastVisionHeadingDeg);
-    SmartDashboard.putNumber("VisionPose/TagCount", lastVisionTagCount);
-    SmartDashboard.putNumber("VisionPose/Timestamp", lastVisionTimestamp);
-  }
-  else {
-    SmartDashboard.putNumber("VisionPose/X", 0);
-    SmartDashboard.putNumber("VisionPose/Y", 0);
-    SmartDashboard.putNumber("VisionPose/HeadingDeg", 0);
-    SmartDashboard.putNumber("VisionPose/TagCount", 0);
-    SmartDashboard.putNumber("VisionPose/Timestamp", 0);
-  }
+  //     var est = visionEst.get();
+  //     var pose2d = est.estimatedPose.toPose2d();
+  //     estConsumer.accept(pose2d, est.timestampSeconds, getEstimationStdDevs());
+  //     hasVisionPose = true;
+  //     lastVisionX = pose2d.getX();
+  //     lastVisionY = pose2d.getY();
+  //     lastVisionHeadingDeg = pose2d.getRotation().getDegrees();
+  //     lastVisionTimestamp = est.timestampSeconds;
+  //     lastVisionTagCount = result.getTargets().size();
+  //   }
+  // }
+  // SmartDashboard.putBoolean("VisionPose/HasPose", hasVisionPose);
+  // // Dashboard output ONCE (latest estimate)
+  // if (hasVisionPose) {
+  //   SmartDashboard.putNumber("VisionPose/X", lastVisionX);
+  //   SmartDashboard.putNumber("VisionPose/Y", lastVisionY);
+  //   SmartDashboard.putNumber("VisionPose/HeadingDeg", lastVisionHeadingDeg);
+  //   SmartDashboard.putNumber("VisionPose/TagCount", lastVisionTagCount);
+  //   SmartDashboard.putNumber("VisionPose/Timestamp", lastVisionTimestamp);
+  // }
+  // else {
+  //   SmartDashboard.putNumber("VisionPose/X", 0);
+  //   SmartDashboard.putNumber("VisionPose/Y", 0);
+  //   SmartDashboard.putNumber("VisionPose/HeadingDeg", 0);
+  //   SmartDashboard.putNumber("VisionPose/TagCount", 0);
+  //   SmartDashboard.putNumber("VisionPose/Timestamp", 0);
+  // }
 }
 
 
   @Override
   public void simulationPeriodic() {
     // This method will be called once per scheduler run during simulation
+    visionSim.update(robotPoseMeters);
+    visionSim.getDebugField();
   }
 }

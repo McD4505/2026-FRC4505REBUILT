@@ -55,10 +55,10 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    controller.a().onTrue(shooter.setShooterCommand(0.5));
+    controller.a().onTrue(shooter.setShooterCommand(1.0));
     controller.a().onFalse(shooter.setShooterCommand(0));
 
-    controller.b().onTrue(shooter.setShooterCommand(-0.5));
+    controller.b().onTrue(shooter.setShooterCommand(-1.0));
     controller.b().onFalse(shooter.setShooterCommand(0));
   }
 
