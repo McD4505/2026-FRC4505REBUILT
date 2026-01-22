@@ -38,6 +38,7 @@ public class SwerveSubsystem extends SubsystemBase
    * Swerve drive object.
    */
   private final SwerveDrive swerveDrive;
+  VisNew vision;
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
    *
@@ -46,6 +47,7 @@ public class SwerveSubsystem extends SubsystemBase
    public SwerveSubsystem(File directory)
   { 
     boolean blueAlliance = false;
+    //position within the field. x = 1 meter, y = 4 meter for blue alliance
     Pose2d startingPose = blueAlliance ? new Pose2d(new Translation2d(Meter.of(1),
                                                                       Meter.of(4)),
                                                     Rotation2d.fromDegrees(0))
@@ -351,6 +353,11 @@ public class SwerveSubsystem extends SubsystemBase
     {
       zeroGyro();
     }
+  }
+  //creates a vision var and configures it
+  public void setupPhotonVision()
+  {
+    vision = new VisNew(swerveDrive::getPose, swerveDrive.field);
   }
 
   /**

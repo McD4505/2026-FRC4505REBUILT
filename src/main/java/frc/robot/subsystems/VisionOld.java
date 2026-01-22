@@ -36,7 +36,7 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 import java.util.List;
 
 
-public class Vision extends SubsystemBase {
+public class VisionOld extends SubsystemBase {
   private double lastVisionX = 0.0;
   private double lastVisionY = 0.0;
   private double lastVisionHeadingDeg = 0.0;
@@ -45,7 +45,7 @@ public class Vision extends SubsystemBase {
   private boolean hasVisionPose = false;
 
   //Transform of the camera rotation and translation relative to the center of the robot
-  private final Transform3d robotToCamTransform;
+  // private final Transform3d robotToCamTransform;
   
   // April Tag Field Layout
   public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
@@ -66,15 +66,17 @@ public class Vision extends SubsystemBase {
 
 
 
-  public Vision(VisionMeasurementConsumer estConsumer) {
-     photonEstimator = new PhotonPoseEstimator(kTagLayout, kRobotToCam);
-     color = new PhotonCamera("Color");
-      bw1 = new PhotonCamera("BandW1");
-      bw2 = new PhotonCamera("BandW2");
+  public VisionOld(VisionMeasurementConsumer estConsumer) {
+    photonEstimator = new PhotonPoseEstimator(kTagLayout, kRobotToCam);
+    color = new PhotonCamera("Color");
+    bw1 = new PhotonCamera("BandW1");
+    bw2 = new PhotonCamera("BandW2");
 
 
 
-      this.estConsumer = estConsumer;
+
+
+    this.estConsumer = estConsumer;
 
     if (Robot.isSimulation()) {
       initSimField();
@@ -222,7 +224,7 @@ public class Vision extends SubsystemBase {
     {
       if (Robot.isSimulation())
       {
-        systemSim.addCamera(cameraSim, robotToCamTransform);
+        // systemSim.addCamera(cameraSim);
       }
     }
 
@@ -302,7 +304,7 @@ public void periodic() {
   @Override
   public void simulationPeriodic() {
     // This method will be called once per scheduler run during simulation
-    visionSim.update(robotPoseMeters);
+    // visionSim.update(robotPoseMeters);
     visionSim.getDebugField();
   }
 }
