@@ -2,23 +2,23 @@
   "drive": {
     "type": "krakenx60",
     "id": 13,
-    "canbus": null
+    "canbus": "rio"
   },
   "angle": {
     "type": "krakenx60",
     "id": 12,
-    "canbus": null
+    "canbus": "rio"
   },
   "encoder": {
     "type": "cancoder",
     "id": 11,
-    "canbus": null
+    "canbus": "rio"
   },
   "inverted": {
     "drive": false,
     "angle": true
   },
-  "absoluteEncoderOffset": -114.609,
+  "absoluteEncoderOffset": 9.7497945118939064,
   "location": {
     "front": 12,
     "left": 12

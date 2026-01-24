@@ -19,10 +19,12 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
-// import frc.robot.subsystems.Vision;
+import frc.robot.subsystems.VisNew;
 import frc.robot.subsystems.*;
+import java.io.File;
 import swervelib.SwerveInputStream;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -41,12 +43,12 @@ public class RobotContainer {
 
     // Replace with CommandPS4Controller or CommandJoystick if needed
   private final CommandXboxController controller =
-      new CommandXboxController(OperatorConstants.kDriverControllerPort);
+  new CommandXboxController(OperatorConstants.kDriverControllerPort);
   
       // Establish a Sendable Chooser that will be able to be sent to the SmartDashboard, allowing selection of desired auto
   private final SendableChooser<Command> autoChooser = new SendableChooser<>();
 
-  private final SwerveSubsystem drivebase = new SwerveSubsystem(null);
+  private final SwerveSubsystem drivebase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"));
   //swerve input stream for controlling robot swervedrive 
    SwerveInputStream driveAngularVelocity = SwerveInputStream.of(drivebase.getSwerveDrive(),
                                                                 () -> controller.getLeftY() * -1,  
@@ -204,4 +206,5 @@ public class RobotContainer {
   public void setMotorBrake(boolean brake) {
     drivebase.setMotorBrake(brake);
   }
+  
 }
