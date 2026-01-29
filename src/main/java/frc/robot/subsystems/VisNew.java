@@ -4,6 +4,7 @@
 
 package frc.robot.subsystems;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.photonvision.PhotonCamera;
@@ -18,8 +19,10 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N1;
@@ -71,6 +74,20 @@ public class VisNew extends SubsystemBase {
   }
   
 
+  public Pose2d getAprilTagPose(int aprilTag, Transform2d robotOffset) {
+    Optional<Pose3d> aprilTagPose3d = fieldLayout.getTagPose(0);
+    if (aprilTagPose3d.isPresent()) {
+      return aprilTagPose3d.get().toPose2d().transformBy(robotOffset);
+    }
+    else {
+      throw new RuntimeException("Cannot get AprilTag " + aprilTag + " from field " + fieldLayout.toString());
+    }
+  }
+  public void updatePoseEstimator() {
+    for (Cameras camera : Cameras.values()) {
+      
+    }
+  }
   /**
    * An example method querying a boolean state of the subsystem (for example, a digital sensor).
    *

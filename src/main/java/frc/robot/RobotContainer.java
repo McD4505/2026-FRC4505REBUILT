@@ -4,9 +4,12 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.*;
+
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.Autos;
 import frc.robot.commands.ExampleCommand;
+import frc.robot.generated.TunerConstants;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.PoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -19,10 +22,12 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
-import frc.robot.subsystems.VisNew;
 import frc.robot.subsystems.*;
 import java.io.File;
-import swervelib.SwerveInputStream;
+
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveRequest;
+
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.RobotBase;
@@ -38,82 +43,29 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  // Vision vision = new Vision((pose, timestamp, stdDevs) -> {});
-  // private Shooter shooter = new Shooter(1);
-
-    // Replace with CommandPS4Controller or CommandJoystick if needed
-  private final CommandXboxController controller =
-  new CommandXboxController(OperatorConstants.kDriverControllerPort);
+  private double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
+  private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
   
-      // Establish a Sendable Chooser that will be able to be sent to the SmartDashboard, allowing selection of desired auto
+    /* Setting up bindings for necessary control of the swerve drive platform */
+  private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
+            .withDeadband(MaxSpeed * 0.05).withRotationalDeadband(MaxAngularRate * 0.05) // Add a 5% deadband
+            .withDriveRequestType(DriveRequestType.Velocity); // Use open-loop control for drive motors
+  private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
+  private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
+
+  private final CommandXboxController controller = new CommandXboxController(OperatorConstants.kDriverControllerPort);
+
+  public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+
+  // Establish a Sendable Chooser that will be able to be sent to the SmartDashboard, allowing selection of desired auto
   private final SendableChooser<Command> autoChooser = new SendableChooser<>();
-
-  private final SwerveSubsystem drivebase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"));
-  //swerve input stream for controlling robot swervedrive 
-   SwerveInputStream driveAngularVelocity = SwerveInputStream.of(drivebase.getSwerveDrive(),
-                                                                () -> controller.getLeftY() * -1,  
-                                                                () -> controller.getLeftX() * -1)
-                                                            .withControllerRotationAxis(controller::getRightX) //right joystick
-                                                            .deadband(OperatorConstants.DEADBAND) //deadzone
-                                                            .scaleTranslation(0.8)
-                                                            .allianceRelativeControl(true); //robot movement aligns with field orientation
-  //makes sure heading is controlled with stick then angular velocity
-  SwerveInputStream driveDirectAngle = driveAngularVelocity.copy().withControllerHeadingAxis(controller::getRightX, //know where its turning
-                                                                                             controller::getRightY)
-                                                           .headingWhile(true);
-  //copys heading making sure head is robot relative
-  SwerveInputStream driveRobotOriented = driveAngularVelocity.copy().robotRelative(true)
-                                                             .allianceRelativeControl(false);
-                                                             SwerveInputStream driveAngularVelocityKeyboard = SwerveInputStream.of(drivebase.getSwerveDrive(),
-                                                                        () -> -controller.getLeftY(),
-                                                                        () -> -controller.getLeftX())
-                                                                    .withControllerRotationAxis(() -> controller.getRawAxis(
-                                                                        2))
-                                                                    .deadband(OperatorConstants.DEADBAND)
-                                                                    .scaleTranslation(0.8)
-                                                 
-                                                                   .allianceRelativeControl(true);
-  // Derive the heading axis with math
-  SwerveInputStream driveDirectAngleKeyboard = driveAngularVelocityKeyboard.copy()
-                                                                               .withControllerHeadingAxis(() ->
-                                                                                                              Math.sin(
-                                                                                                                  controller.getRawAxis(
-                                                                                                                      2) *
-                                                                                                                  Math.PI) *
-                                                                                                              (Math.PI *
-                                                                                                               2),
-                                                                                                          () ->
-                                                                                                              Math.cos(
-                                                                                                                  controller.getRawAxis(
-                                                                                                                      2) *
-                                                                                                                  Math.PI) *
-                                                                                                              (Math.PI *
-                                                                                                               2))
-                                                                               .headingWhile(true)
-                                                                               .translationHeadingOffset(true)
-                                                                               .translationHeadingOffset(Rotation2d.fromDegrees(
-                                                                                   0));
-
-
-
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the trigger bindings
     configureBindings();
 
-    //autoChooser USE THIS FOR AUTO COMMANDS
-    autoChooser.setDefaultOption("Do Nothing", Commands.runOnce(drivebase::zeroGyroWithAlliance).andThen(Commands.none()));
-        //Add a simple auto option to have the robot drive forward for 1 second then stop
-    autoChooser.addOption("Drive Forward", Commands.runOnce(drivebase::zeroGyroWithAlliance).withTimeout(.2)
-                                                .andThen(drivebase.driveForward().withTimeout(1)));
-    //Put the autoChooser on the SmartDashboard
-    SmartDashboard.putData("Auto Chooser", autoChooser);
-
-    if (autoChooser.getSelected() == null ) {
-    RobotModeTriggers.autonomous().onTrue(Commands.runOnce(drivebase::zeroGyroWithAlliance));
-    }
-
+    SmartDashboard.putData("auto chooser", autoChooser);
   }
 
   /**
@@ -126,67 +78,19 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    //sets commands as variables to use
-    Command driveFieldOrientedDirectAngle      = drivebase.driveFieldOriented(driveDirectAngle);
-    Command driveFieldOrientedAnglularVelocity = drivebase.driveFieldOriented(driveAngularVelocity);
-    Command driveRobotOrientedAngularVelocity  = drivebase.driveFieldOriented(driveRobotOriented);
-    Command driveFieldOrientedDirectAngleKeyboard      = drivebase.driveFieldOriented(driveDirectAngleKeyboard);
-    Command driveFieldOrientedAnglularVelocityKeyboard = drivebase.driveFieldOriented(driveAngularVelocityKeyboard);
-    if (RobotBase.isSimulation()) { //sets default commands
-      drivebase.setDefaultCommand(driveFieldOrientedDirectAngleKeyboard); //heading axis derive in sim
-    } else {
-      drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity); //use ang velocity with irl
-    }
-
-     if (Robot.isSimulation())
-    {//if in sim
-      Pose2d target = new Pose2d(new Translation2d(1, 4),
-                                 Rotation2d.fromDegrees(90)); //sets where target pose is at
-      //drivebase.getSwerveDrive().field.getObject("targetPose").setPose(target);
-      driveDirectAngleKeyboard.driveToPose(() -> target, 
-                                           new ProfiledPIDController(5,
-                                                                     0,
-                                                                     0,
-                                                                     new Constraints(5, 2)),
-                                           new ProfiledPIDController(5,
-                                                                     0,
-                                                                     0,
-                                                                     new Constraints(Units.degreesToRadians(360),
-                                                                                     Units.degreesToRadians(180))
-                                           ));
-      controller.start().onTrue(Commands.runOnce(() -> drivebase.resetOdometry(new Pose2d(3, 3, new Rotation2d()))));
-      controller.button(1).whileTrue(drivebase.sysIdDriveMotorCommand());
-      controller.button(2).whileTrue(Commands.runEnd(() -> driveDirectAngleKeyboard.driveToPoseEnabled(true),
-                                                     () -> driveDirectAngleKeyboard.driveToPoseEnabled(false)));
+    drivetrain.setDefaultCommand(
+            // Drivetrain will execute this command periodically
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(-controller.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-controller.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+                    .withRotationalRate(-controller.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+            )
+        );
 
 
 
     }
-    if (DriverStation.isTest())
-    {
-      drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity); // Overrides drive command above!
 
-      controller.x().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly()); //x is locking drivebase?
-      controller.start().onTrue((Commands.runOnce(drivebase::zeroGyro))); //zeros gyro when controller starts
-      controller.back().whileTrue(drivebase.centerModulesCommand());
-      controller.leftBumper().onTrue(Commands.none());
-      controller.rightBumper().onTrue(Commands.none());
-    } else
-    {
-      controller.a().onTrue((Commands.runOnce(drivebase::zeroGyro))); //a is zero gyro
-      controller.start().whileTrue(Commands.none()); //
-      controller.back().whileTrue(Commands.none());
-      controller.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly()); //left bumper locks drivebase
-      controller.rightBumper().onTrue(Commands.none());
-    }
-
-
-    // controller.a().onTrue(shooter.setShooterCommand(1.0));
-    // controller.a().onFalse(shooter.setShooterCommand(0));
-
-    // controller.b().onTrue(shooter.setShooterCommand(-1.0));
-    // controller.b().onFalse(shooter.setShooterCommand(0));
-  }
 
   // /**
   //  * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -202,9 +106,5 @@ public class RobotContainer {
     // Pass in the selected auto from the SmartDashboard as our desired autnomous commmand 
     return autoChooser.getSelected();
   }
-  // Method to set motor brake mode
-  public void setMotorBrake(boolean brake) {
-    drivebase.setMotorBrake(brake);
-  }
-  
+
 }
