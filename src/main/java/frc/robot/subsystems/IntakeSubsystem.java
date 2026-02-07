@@ -59,7 +59,6 @@ public class IntakeSubsystem extends SubsystemBase {
             SmartDashboard.setDefaultNumber("Intake Target Velocity", 0);
             SmartDashboard.setDefaultBoolean("Intake Control Mode", false);
             SmartDashboard.setDefaultBoolean("Reset Intake Encoder", false);
-
     }
 
     public void resetIntakeEncoder(){
