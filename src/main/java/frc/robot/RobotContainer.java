@@ -42,20 +42,21 @@ public class RobotContainer {
 
     public final CommandSwerveDrivetrain drivetrain = ORTunerConstants.createDrivetrain();
 
-    private final TurretSubsystem turret = new TurretSubsystem(4); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
-    private final IntakeSubsystem intake = new IntakeSubsystem(15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
+    // private final oldTurretSubsystem turret = new oldTurretSubsystem(1, 15);
+    private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
+    // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
 
     public RobotContainer() {
         configureBindings();
     }
 
     private void configureBindings() {
+        // joystick.x().onTrue(new InstantCommand(() -> SmartDashboard.putNumber("Intake Target Velocity", 0.5)));
+        // joystick.x().onFalse(new InstantCommand(() -> SmartDashboard.putNumber("Intake Target Velocity", 0)));
 
-        joystick.y().onTrue(turret.setShooterCommand(1.00));
-        joystick.y().onFalse(turret.setShooterCommand(0.0));
+        // joystick.y().onTrue(turret.setShooterCommand(-0.80, 0.30));
+        // joystick.y().onFalse(turret.setShooterCommand(0.0, 0.00));
 
-        joystick.x().onTrue(new InstantCommand(() -> SmartDashboard.putNumber("Intake Target Velocity", 0.5)));
-        joystick.x().onFalse(new InstantCommand(() -> SmartDashboard.putNumber("Intake Target Velocity", 0)));
 
         
         // Note that X is defined as forward according to WPILib convention,
