@@ -70,6 +70,8 @@ public class TurretSubsystem extends SubsystemBase {
             SmartDashboard.setDefaultNumber("Turret 1 Target Velocity", 0);
 
             SmartDashboard.setDefaultNumber("Turret 2 Target Velocity", 0);
+
+            SmartDashboard.setDefaultBoolean("STOP", false);
     }
 
     // Run intake in velocity control (slot 0)
@@ -93,6 +95,12 @@ public class TurretSubsystem extends SubsystemBase {
     public void periodic() {
         SmartDashboard.putNumber("Turret 1 Actual Velocity", turretEncoder1.getVelocity());
         SmartDashboard.putNumber("Turret 2 Actual Velocity", turretEncoder2.getVelocity());
+
+        if (SmartDashboard.getBoolean("STOP", false)){
+            SmartDashboard.putBoolean("STOP", false);
+            SmartDashboard.putNumber("Turret 1 Target Velocity", 0);
+            SmartDashboard.putNumber("Turret 2 Target Velocity", 0);
+        }
 
         double turretTargetVelocity1 = SmartDashboard.getNumber("Turret 1 Target Velocity", 0);
         setVelocity1(turretTargetVelocity1);
