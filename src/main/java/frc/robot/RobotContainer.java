@@ -42,7 +42,7 @@ public class RobotContainer {
 
     public final CommandSwerveDrivetrain drivetrain = ORTunerConstants.createDrivetrain();
 
-    // private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
+    private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
     // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
 
     public RobotContainer() {
