@@ -21,12 +21,15 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -46,6 +49,9 @@ public class Vision extends SubsystemBase {
                 new Transform3d(new Translation3d(0.2921, 0.0, 0.2667), new Rotation3d(0, 0, 0));
 
   private Matrix<N3,N1> curStdDevs;
+  
+StructPublisher<Pose3d> publisher = NetworkTableInstance.getDefault()
+  .getStructTopic("VisionPose", Pose3d.struct).publish();
   
 
 
@@ -97,7 +103,7 @@ public Pose2d getTagPose(int tagId) {
     return null;
 }
 
-public int getTagId() {
+public int getTagId(boolean isRed) {
     // Use getLatestResult for the most current data
     var result = camera_left.getLatestResult();
     
@@ -107,13 +113,16 @@ public int getTagId() {
     PhotonTrackedTarget bestTarget = null;
     
     for (var target : result.getTargets()) {
-        if (bestTarget == null) {
-            bestTarget = target;
-        } 
-    //We want LESS ambiguity (<), not more (>)
-        else if (target.getPoseAmbiguity() < bestTarget.getPoseAmbiguity()) {
-            bestTarget = target;
+        if ((target.getFiducialId() <= 16 && isRed) || (target.getFiducialId() > 16 && !isRed)){ //if the tag is on our alliance side
+          if (bestTarget == null) {
+              bestTarget = target;
+          } 
+      //We want LESS ambiguity (<), not more (>)
+          else if (target.getPoseAmbiguity() < bestTarget.getPoseAmbiguity()) {
+              bestTarget = target;
+          }
         }
+  
     }
 
     if (bestTarget == null) return 0;
@@ -167,6 +176,7 @@ public int getTagId() {
       }
        visionEst.ifPresent(
                     est -> {
+                      publisher.set(est.estimatedPose);
                         // Change our trust in the measurement based on the tags we can see
                         var estStdDevs = getEstimationStdDevs();
                         estConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);

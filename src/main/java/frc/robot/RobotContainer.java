@@ -19,6 +19,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -28,8 +29,7 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.subsystems.Shooter;
 import frc.robot.subsystems.Vision;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-
-import frc.robot.generated.TunerConstants;
+import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 
 public class RobotContainer {
@@ -57,6 +57,7 @@ public class RobotContainer {
 
     public final Boolean isTestingShooter = false;
     public Shooter shooter;
+    public final Boolean isRed = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
 
     public RobotContainer() {
                 // Build an auto chooser. This will use Commands.none() as the default option.
@@ -67,7 +68,7 @@ public class RobotContainer {
 
         SmartDashboard.putData("Auto Chooser", autoChooser);
   
-        shooter = new Shooter(15, 1);
+        // shooter = new Shooter(15, 1);
         configureBindings();
     }
 
@@ -117,7 +118,7 @@ private Command pathFindToAprilTag() {
     // Defer allows us to calculate the target Pose WHEN the button is pressed
     return Commands.defer(() -> {
         
-        int visibleTagID = vision.getTagId();
+        int visibleTagID = vision.getTagId(isRed);
 
         // 1. Safety Check: Did we see a tag?
         if (visibleTagID <= 0) {
@@ -134,9 +135,6 @@ private Command pathFindToAprilTag() {
         }
 
         // 3. Create the pathfinding command
-        // OPTIONAL: Add an offset so you don't hit the wall.
-        // This example goes to the tag location exactly. 
-        // If you want to stop in front, you need to do coordinate math based on the tag's rotation.
         // Inside the Defer block
         Transform2d offset = new Transform2d(new Translation2d(1.0, 0), new Rotation2d(0));
         // This calculates a point 1 meter "out" from the tag's face
