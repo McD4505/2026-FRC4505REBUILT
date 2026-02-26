@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
@@ -31,6 +32,7 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
@@ -38,96 +40,151 @@ import frc.robot.Robot;
 public class Vision extends SubsystemBase {
   /** Creates a new ExampleSubsystem. */
 
+
+    // Inner class to represent each camera
+  private class VisionCamera {
+    public final PhotonCamera camera;
+    public final String cameraName;
+    public final Transform3d robotToCamera;
+    public final PhotonPoseEstimator poseEstimator;
+    public PhotonCameraSim cameraSim;
+    
+    public VisionCamera(String name, Transform3d transform) {
+      this.cameraName = name;
+      this.camera = new PhotonCamera(name);
+      this.robotToCamera = transform;
+      this.poseEstimator = new PhotonPoseEstimator(kTagFieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, transform);
+    }
+  }
+  
+  private VisionCamera[] cameras;
+
   private EstimateConsumer estConsumer; //accepts pose
   private final Supplier<Pose2d> poseProvider; //gives pose
 
-  private PhotonCamera camera_left;
-  private final String CAMERA_LEFT_NAME = "color";
   private final AprilTagFieldLayout kTagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
-  private PhotonPoseEstimator photonEstimator;
   public static final Transform3d kRobotToCam =
                 new Transform3d(new Translation3d(0.2921, 0.0, 0.2667), new Rotation3d(0, 0, 0));
 
   private Matrix<N3,N1> curStdDevs;
   
-StructPublisher<Pose3d> publisher = NetworkTableInstance.getDefault()
-  .getStructTopic("VisionPose", Pose3d.struct).publish();
+  StructPublisher<Pose3d> publisher = NetworkTableInstance.getDefault()
+    .getStructTopic("VisionPose", Pose3d.struct).publish();
   
 
 
   
   // The standard deviations of our vision estimated poses, which affect correction rate
   // (Fake values. Experiment and determine estimation noise on an actual robot.)
-  public static final Matrix<N3, N1> kSingleTagStdDevs = VecBuilder.fill(1, 1, 2);
-  public static final Matrix<N3, N1> kMultiTagStdDevs = VecBuilder.fill(0.5, 0.5, 1);
+  public static final Matrix<N3, N1> kSingleTagStdDevs = VecBuilder.fill(0.5, 0.5, 1);
+  public static final Matrix<N3, N1> kMultiTagStdDevs = VecBuilder.fill(0.1, 0.1, 0.15);
 
-  private PhotonCameraSim cameraSim;
   private VisionSystemSim visionSim;
 
   public Vision(EstimateConsumer estConsumer, Supplier<Pose2d> poseProvider) {
     this.poseProvider = poseProvider;
     this.estConsumer = estConsumer;
-    this.camera_left = new PhotonCamera(CAMERA_LEFT_NAME);
-    photonEstimator = new PhotonPoseEstimator(kTagFieldLayout, kRobotToCam);
+        // Initialize cameras with their transforms relative to robot center
+    // Camera 1: Left side, forward facing
+    Transform3d leftCameraTransform = new Transform3d(
+      new Translation3d(0.2921, 0.0, 0.2667), 
+      new Rotation3d(0, 0, 0)
+    );
+    
+    // Camera 2: Right side (example - adjust based on your actual camera position)
+    Transform3d rightCameraTransform = new Transform3d(
+      new Translation3d(0.2921, -0.3, 0.2667), // Example offset: 30cm to the right
+      new Rotation3d(0, 0, 0)
+    );
+    
+    cameras = new VisionCamera[] {
+      new VisionCamera("color", leftCameraTransform),      // Your existing camera
+      // new VisionCamera("color_right", rightCameraTransform) // New camera (adjust name/position)
+    };
     if (Robot.isSimulation()) {
-          visionSim = new VisionSystemSim("main");
-          visionSim.addAprilTags(kTagFieldLayout);
-          // Create simulated camera properties. These can be set to mimic your actual camera.
-          var cameraProp = new SimCameraProperties();
-          cameraProp.setCalibError(0, 0); 
-          cameraProp.setAvgLatencyMs(0);
-          cameraProp.setLatencyStdDevMs(0);
-          cameraProp.setCalibration(960, 720, Rotation2d.fromDegrees(90));
-          // cameraProp.setCalibError(0.35, 0.10);
-          cameraProp.setFPS(15);
-          // cameraProp.setAvgLatencyMs(50);
-          // cameraProp.setLatencyStdDevMs(15);
-          // Create a PhotonCameraSim which will update the linked PhotonCamera's values with visible
-          // targets.
-          cameraSim = new PhotonCameraSim(camera_left, cameraProp);
-          // Add the simulated camera to view the targets on this simulated field.
-          visionSim.addCamera(cameraSim, kRobotToCam);
-
-          cameraSim.enableDrawWireframe(true);
+          setupSimulation();
+    }
+  }
+  private void setupSimulation() {
+    visionSim = new VisionSystemSim("main");
+    visionSim.addAprilTags(kTagFieldLayout);
+    
+    for (VisionCamera visionCam : cameras) {
+      var cameraProp = new SimCameraProperties();
+      cameraProp.setCalibError(0, 0);
+      cameraProp.setAvgLatencyMs(0);
+      cameraProp.setLatencyStdDevMs(0);
+      cameraProp.setCalibration(640, 480, Rotation2d.fromDegrees(90));
+      cameraProp.setFPS(15);
+      
+      visionCam.cameraSim = new PhotonCameraSim(visionCam.camera, cameraProp);
+      visionSim.addCamera(visionCam.cameraSim, visionCam.robotToCamera);
+      visionCam.cameraSim.enableDrawWireframe(true);
     }
   }
 
 public Pose2d getTagPose(int tagId) {
-    // Return null if invalid, so we can check for it later
-    if(tagId <= 0) return null; 
-    
-    var tagOpt = kTagFieldLayout.getTagPose(tagId);
-    if (tagOpt.isPresent()) {
-        return tagOpt.get().toPose2d();
-    }
-    return null;
+  // Return null if invalid, so we can check for it later
+  if(tagId <= 0) return null; 
+  
+  var tagOpt = kTagFieldLayout.getTagPose(tagId);
+  if (tagOpt.isPresent()) {
+      return tagOpt.get().toPose2d();
+  }
+  return null;
 }
-
-public int getTagId(boolean isRed) {
-    // Use getLatestResult for the most current data
-    var result = camera_left.getLatestResult();
+  private void processCamera(VisionCamera visionCam) {
+    Optional<EstimatedRobotPose> visionEst = Optional.empty();
     
-    if (!result.hasTargets()) {
-        return 0;
+    for (var result : visionCam.camera.getAllUnreadResults()) {
+      visionEst = visionCam.poseEstimator.estimateCoprocMultiTagPose(result);
+      if (visionEst.isEmpty()) {
+        visionEst = visionCam.poseEstimator.estimateLowestAmbiguityPose(result);
+      }
+      
+      updateEstimationStdDevs(visionEst, result.getTargets());
+      
+      if (Robot.isSimulation()) {
+        visionEst.ifPresentOrElse(
+          est -> getSimDebugField()
+            .getObject("VisionEstimation_" + visionCam.cameraName)
+            .setPose(est.estimatedPose.toPose2d()),
+          () -> getSimDebugField().getObject("VisionEstimation_" + visionCam.cameraName).setPoses()
+        );
+      }
+      
+      visionEst.ifPresent(est -> {
+        publisher.set(est.estimatedPose);
+        var estStdDevs = getEstimationStdDevs();
+        estConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
+      });
     }
+  }
+
+  public int getTagId(boolean isRed) {
     PhotonTrackedTarget bestTarget = null;
+    VisionCamera bestCamera = null;
     
-    for (var target : result.getTargets()) {
-        if ((target.getFiducialId() <= 16 && isRed) || (target.getFiducialId() > 16 && !isRed)){ //if the tag is on our alliance side
-          if (bestTarget == null) {
-              bestTarget = target;
-          } 
-      //We want LESS ambiguity (<), not more (>)
-          else if (target.getPoseAmbiguity() < bestTarget.getPoseAmbiguity()) {
-              bestTarget = target;
+    // Check all cameras for the best target
+    for (VisionCamera visionCam : cameras) {
+      var result = visionCam.camera.getLatestResult();
+      
+      if (!result.hasTargets()) continue;
+      
+      for (var target : result.getTargets()) {
+        // Filter for alliance side tags
+        if ((target.getFiducialId() <= 16 && isRed) || (target.getFiducialId() > 16 && !isRed)) {
+          if (bestTarget == null || target.getPoseAmbiguity() < bestTarget.getPoseAmbiguity()) {
+            bestTarget = target;
+            bestCamera = visionCam;
           }
         }
-  
+      }
     }
-
+    
     if (bestTarget == null) return 0;
     return bestTarget.getFiducialId();
-}
+  }
 
 
   /**
@@ -153,37 +210,37 @@ public int getTagId(boolean isRed) {
     // Query some boolean state, such as a digital sensor.
     return false;
   }
+  public Optional<Pose2d> getEstimatedRobotPose() {
+    for (VisionCamera visionCam : cameras) {
+      var result = visionCam.camera.getLatestResult();
+      if (!result.hasTargets()) continue;
+
+      var estimate = visionCam.poseEstimator.estimateCoprocMultiTagPose(result);
+      if (estimate.isEmpty()) {
+          estimate = visionCam.poseEstimator.estimateLowestAmbiguityPose(result);
+      }
+
+      if (estimate.isPresent()) {
+          return Optional.of(estimate.get().estimatedPose.toPose2d());
+      }
+    }
+    return Optional.empty();
+  }
 
   @Override
   public void periodic() {
-    Optional<EstimatedRobotPose> visionEst = Optional.empty(); //sets visionEstimator var
-    for (var result: camera_left.getAllUnreadResults()) { //for each new apriltag result
-      visionEst = photonEstimator.estimateCoprocMultiTagPose(result);
-      if (visionEst.isEmpty()) {
-        visionEst = photonEstimator.estimateLowestAmbiguityPose(result); //change pipeline estimation to find one with least uncertainty
-      }
-      updateEstimationStdDevs(visionEst, result.getTargets());
-      
-      if (Robot.isSimulation()) {
-          visionEst.ifPresentOrElse(
-                  est ->
-                          getSimDebugField()
-                                  .getObject("VisionEstimation")
-                                  .setPose(est.estimatedPose.toPose2d()),
-                  () -> {
-                      getSimDebugField().getObject("VisionEstimation").setPoses();
-                  });
-      }
-       visionEst.ifPresent(
-                    est -> {
-                      publisher.set(est.estimatedPose);
-                        // Change our trust in the measurement based on the tags we can see
-                        var estStdDevs = getEstimationStdDevs();
-                        estConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
-                    });
+    for (VisionCamera visionCam : cameras) {
+      processCamera(visionCam);
     }
-    
-    // This method will be called once per scheduler run
+    var poseOpt = getEstimatedRobotPose();
+    if (poseOpt.isPresent()) {
+      Pose2d pose = poseOpt.get();
+      SmartDashboard.putNumber("Vision X", pose.getX());
+      SmartDashboard.putNumber("Vision Y", pose.getY());
+      SmartDashboard.putNumber("Vision Rotation", pose.getRotation().getDegrees());
+    } else {
+      SmartDashboard.putString("Vision Status", "No Pose");
+    }
   }
       /**
      * Calculates new standard deviations This algorithm is a heuristic that creates dynamic standard
@@ -203,7 +260,7 @@ public int getTagId(boolean isRed) {
 
       //Precalculation: see how many tags we found and calculate an average distance metric
       for (var tgt : targets) {
-        var tagPose = photonEstimator.getFieldTags().getTagPose(tgt.getFiducialId());
+        var tagPose = kTagFieldLayout.getTagPose(tgt.getFiducialId());
         if (tagPose.isEmpty()) continue;
         numTags++;
         avgDist += tagPose.get().toPose2d().getTranslation().getDistance(estimatedPose.get().estimatedPose.toPose2d().getTranslation());
@@ -217,9 +274,7 @@ public int getTagId(boolean isRed) {
                 // Decrease std devs if multiple targets are visible
         if (numTags > 1) estStdDevs = kMultiTagStdDevs;
         // Increase std devs based on (average) distance
-        if (numTags == 1 && avgDist > 4)
-            estStdDevs = VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
-        else estStdDevs = estStdDevs.times(1 + (avgDist * avgDist / 30));
+        estStdDevs = estStdDevs.times(1 + (avgDist * avgDist / 30));
         curStdDevs = estStdDevs;
       }
     }

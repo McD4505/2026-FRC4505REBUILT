@@ -374,7 +374,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     
         return pathfindingCommand;
     }
-    
+
     
     public double distanceTo(Pose2d pose) {
         return getState().Pose.getTranslation().getDistance(pose.getTranslation());

@@ -8,6 +8,7 @@ import static edu.wpi.first.units.Units.*;
 
 import java.util.Set;
 
+import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.commands.PathPlannerAuto;
@@ -53,6 +54,7 @@ public class RobotContainer {
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     public Vision vision = new Vision(drivetrain::addVisionMeasurement, drivetrain::getPose);
 
+
     private final SendableChooser<Command> autoChooser;
 
     public final Boolean isTestingShooter = false;
@@ -62,9 +64,6 @@ public class RobotContainer {
     public RobotContainer() {
                 // Build an auto chooser. This will use Commands.none() as the default option.
         autoChooser = AutoBuilder.buildAutoChooser();
-
-        
-
         // Another option that allows you to specify the default auto by its name
         // autoChooser = AutoBuilder.buildAutoChooser("My Default Auto");
 
@@ -116,6 +115,13 @@ public class RobotContainer {
           drivetrain.registerTelemetry(logger::telemeterize);
         }
     }
+public void initializeRobotPoseFromVision() {
+    vision.getEstimatedRobotPose().ifPresent(pose -> {
+    drivetrain.resetPose(pose);
+    System.out.println("Initialized pose from vision: " + pose);
+});
+
+}
 private Command pathFindToAprilTag() {
     // Defer allows us to calculate the target Pose WHEN the button is pressed
     return Commands.defer(() -> {
