@@ -2,7 +2,9 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Vector;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.SignalLogger;
@@ -10,12 +12,18 @@ import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.ctre.phoenix6.swerve.utility.WheelForceCalculator.Feedforwards;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -23,11 +31,22 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
-import frc.robot.generated.ORTunerConstants.TunerSwerveDrivetrain;
-//import frc.robot.generated.PRTunerConstants.TunerSwerveDrivetrain;
+//import frc.robot.generated.ORTunerConstants.TunerSwerveDrivetrain;
+import frc.robot.generated.PRTunerConstants.TunerSwerveDrivetrain;
+
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.path.GoalEndState;
+import com.pathplanner.lib.path.PathConstraints;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.Waypoint;
+import com.pathplanner.lib.util.PathPlannerLogging;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -48,10 +67,31 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /* Keep track if we've ever applied the operator perspective before or not */
     private boolean m_hasAppliedOperatorPerspective = false;
 
+    private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
+
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
+
+    private Pose2d targetPose = new Pose2d();
+    PathConstraints constraints = new PathConstraints(4.5, 3.0, Units.degreesToRadians(360), Units.degreesToRadians(180));
+
+    public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
+
+    public void setTargetPose(Pose2d newPose) {
+        targetPose = newPose;
+    }
+
+    public void setTargetPose(int ID){
+        Pose2d tagPose = kTagLayout.getTagPose(ID).get().toPose2d();
+        Transform2d robotOffset = new Transform2d(0.4048125,0,Rotation2d.kZero);
+        targetPose = tagPose.transformBy(robotOffset);
+    }
+
+    public Pose2d getTargetPose() {
+        return targetPose;
+    }
 
     /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
     private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(
@@ -133,6 +173,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+        configureAutoBuilder();
     }
 
     /**
@@ -157,6 +198,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+        configureAutoBuilder();
     }
 
     /**
@@ -189,6 +231,68 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+        configureAutoBuilder();
+    }
+
+    private void configureAutoBuilder() {
+        // Congure AutoBuilder last
+        try{
+            var config = RobotConfig.fromGUISettings();
+            AutoBuilder.configure(
+                () -> getState().Pose,      // Supplier of current robot pose
+                this::resetPose,            // Consumer for seeding pose against auto
+                () -> getState().Speeds,    // Supplier of current robot speeds
+                // Consumer of ChassisSpeeds and feedforwards to drive the robot
+                (speeds, feedforwards) -> setControl(
+                    m_pathApplyRobotSpeeds.withSpeeds(speeds)
+                        .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
+                        .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())
+                ),
+                new PPHolonomicDriveController(
+                    // PID constants for translation
+                    new PIDConstants(5.0,0.0,0.0),
+                    // PID constants for rotation
+                    new PIDConstants(5.0,0.0,0.0)
+                ), 
+                config, 
+                // Assume the path needs to be flipped for Red vs Blue, this is normally the case
+                () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+                this
+            );
+        } catch (Exception ex) {
+            DriverStation.reportError("Failed to load PathPlanner config and configure AutoBuilder", ex.getStackTrace());
+        }
+
+    }
+
+    public Command pathfind(){
+        // Create a list of waypoints from poses. Each pose represents one waypoint.
+        // The rotation component of the pose should be the direction of travel. Do not use holonomic rotation.
+        List<Waypoint> waypoints = PathPlannerPath.waypointsFromPoses(
+                new Pose2d(getState().Pose.getX(), getState().Pose.getY(), Rotation2d.fromRadians(Math.atan2(targetPose.getY()-getState().Pose.getY(), targetPose.getX()-getState().Pose.getX()))),
+                new Pose2d(targetPose.getX(), targetPose.getY(), Rotation2d.fromRadians(Math.atan2(targetPose.getY()-getState().Pose.getY(), targetPose.getX()-getState().Pose.getX())))
+        );
+
+        // PathConstraints constraints = new PathConstraints(4.5, 3.0, 2*Math.PI, Math.PI); // The constraints for this path.
+        // PathConstraints constraints = PathConstraints.unlimitedConstraints(12.0); // You can also use unlimited constraints, only limited by motor torque and nominal battery voltage
+
+        PathPlannerPath path = new PathPlannerPath(
+            waypoints,
+            constraints,
+            null, // The ideal starting state, this is only relevant for pre-planned paths, so can be null for on-the-fly paths.
+            new GoalEndState(0.0, targetPose.getRotation()) // Goal end state. You can set a holonomic rotation here. If using a differential drivetrain, the rotation will have no effect.
+        
+        );
+
+        // Prevent the path from being flipped if the coordinates are already correct
+        path.preventFlipping = true;
+
+        // Since AutoBuilder is configured, we can use it to build pathfinding commands
+        Command pathfindingCommand = AutoBuilder.pathfindThenFollowPath(
+            path,
+            constraints
+        );
+        return pathfindingCommand;
     }
 
     /**

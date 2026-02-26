@@ -26,8 +26,8 @@ public class TalonFXSubsystem extends SubsystemBase {
 
 
   public TalonFXSubsystem(int talonFXID) {
-    canBus = new CANBus("subsystem");
-    talonFX = new TalonFX(talonFXID, canBus);
+    canBus = new CANBus("rio");
+    talonFX = new TalonFX(talonFXID);
     dc = new DutyCycleOut(0);
 
     talonFXConfig = new TalonFXConfiguration();
@@ -52,9 +52,7 @@ public class TalonFXSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-      // SmartDashboard.putNumber("TalonFX Actual Position", talonFX.getPosition());
-      // SmartDashboard.putNumber("Intake Actual Velocity", talonFX.getVelocity());
-  }
+}
 
   @Override
   public void simulationPeriodic() {

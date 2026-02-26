@@ -19,14 +19,15 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.PRTunerConstants;
-import frc.robot.generated.ORTunerConstants;
+//import frc.robot.generated.ORTunerConstants;
 
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.TalonFXSubsystem;
 
 public class RobotContainer {
-    private double MaxSpeed = 1.0 * ORTunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+    private double MaxSpeed = 1.0 * PRTunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
     /* Setting up bindings for necessary control of the swerve drive platform */
@@ -40,10 +41,18 @@ public class RobotContainer {
 
     private final CommandXboxController joystick = new CommandXboxController(0);
 
-    public final CommandSwerveDrivetrain drivetrain = ORTunerConstants.createDrivetrain();
+    public final CommandSwerveDrivetrain drivetrain = PRTunerConstants.createDrivetrain();
 
-    private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
+    public final Vision vision = new Vision(drivetrain::addVisionMeasurement);
+
+
+
+    // private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
     // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
+
+    // private final TalonFXSubsystem talon1 = new TalonFXSubsystem(6);
+    // private final TalonFXSubsystem talon2 = new TalonFXSubsystem(7);
+    // private final TalonFXSubsystem talon3 = new TalonFXSubsystem(8);
 
     public RobotContainer() {
         configureBindings();
@@ -56,8 +65,13 @@ public class RobotContainer {
         // joystick.y().onTrue(turret.setShooterCommand(-0.80, 0.30));
         // joystick.y().onFalse(turret.setShooterCommand(0.0, 0.00));
 
+        // joystick.y().onTrue(talon1.setTalonFXSpeedCommand(-0.15));
+        // joystick.y().onFalse(talon1.setTalonFXSpeedCommand(0.00));
+        // joystick.y().onTrue(talon2.setTalonFXSpeedCommand(0.750));
+        // joystick.y().onFalse(talon2.setTalonFXSpeedCommand(0.00));
+        // joystick.b().onTrue(talon3.setTalonFXSpeedCommand(-0.50));
+        // joystick.b().onFalse(talon3.setTalonFXSpeedCommand(0.00));
 
-        
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
         drivetrain.setDefaultCommand(
@@ -68,6 +82,10 @@ public class RobotContainer {
                     .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
+
+
+        joystick.povUp().onTrue(new InstantCommand(() -> drivetrain.setTargetPose(10)));
+        joystick.povUp().onTrue(drivetrain.pathfind());
 
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
