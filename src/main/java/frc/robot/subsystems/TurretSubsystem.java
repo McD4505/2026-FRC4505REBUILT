@@ -1,15 +1,16 @@
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
+
 package frc.robot.subsystems;
 
-import com.revrobotics.PersistMode;
-import com.revrobotics.RelativeEncoder;
-import com.revrobotics.ResetMode;
-import com.revrobotics.spark.ClosedLoopSlot;
-import com.revrobotics.spark.FeedbackSensor;
-import com.revrobotics.spark.SparkBase.ControlType;
-import com.revrobotics.spark.SparkClosedLoopController;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.config.SparkMaxConfig;
+import static edu.wpi.first.units.Units.*;
+
+import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.configs.*;
+import com.ctre.phoenix6.hardware.*;
+import com.ctre.phoenix6.signals.*;
+import com.ctre.phoenix6.controls.DutyCycleOut;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -17,101 +18,83 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class TurretSubsystem extends SubsystemBase {
+  
+  private final CANBus canBus;
+  private final TalonFX turretFeedMotor;
+  private final TalonFX topTurretMotor;
+  private final TalonFX bottomTurretMotor;
+  private final DutyCycleOut turretFeedDC;
+  private final DutyCycleOut topTurretDC;
+  private final DutyCycleOut bottomTurretDC;
+  private final TalonFXConfiguration turretFeedConfig;
+  private final TalonFXConfiguration topTurretConfig;
+  private final TalonFXConfiguration bottomTurretConfig;
 
-    private final SparkMax turretMotor1;
-    private final SparkMaxConfig turretMotorConfig;
-    private final SparkClosedLoopController turretClosedLoopController1;
-    private final RelativeEncoder turretEncoder1;
+  public TurretSubsystem(int turretFeedID, int topTurretID, int bottomTurretID) {
+    canBus = new CANBus("rio");
+    turretFeedMotor = new TalonFX(turretFeedID, canBus);
+    topTurretMotor = new TalonFX(topTurretID, canBus);
+    bottomTurretMotor = new TalonFX(bottomTurretID, canBus);
+    turretFeedDC = new DutyCycleOut(0);
+    topTurretDC = new DutyCycleOut(0);
+    bottomTurretDC = new DutyCycleOut(0);
 
-    private final SparkMax turretMotor2;
-    private final SparkClosedLoopController turretClosedLoopController2;
-    private final RelativeEncoder turretEncoder2;
+    turretFeedConfig = new TalonFXConfiguration();
+    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on slot 0
+    turretFeedConfig.Slot0.kP = 1;
+    turretFeedConfig.Slot0.kI = 0;
+    turretFeedConfig.Slot0.kD = 10;
+    turretFeedConfig.Slot0.kV = 2;
 
-    private final double gearRatio = 1.00; //Don't forget to change Elastic to New Max and Min Speeds (5767.0 / gearRatio)
+    turretFeedMotor.getConfigurator().apply(turretFeedConfig);
 
-    public TurretSubsystem(int turretID1, int turretID2) {
-        turretMotor1 = new SparkMax(turretID1, MotorType.kBrushless);
-        turretClosedLoopController1 = turretMotor1.getClosedLoopController();
-        turretEncoder1 = turretMotor1.getEncoder();
+    turretFeedMotor.setPosition(0);
 
-        turretMotor2 = new SparkMax(turretID2, MotorType.kBrushless);
-        turretClosedLoopController2 = turretMotor2.getClosedLoopController();
-        turretEncoder2 = turretMotor2.getEncoder();
+    topTurretConfig = new TalonFXConfiguration();
+    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on slot 0
+    topTurretConfig.Slot0.kP = 1;
+    topTurretConfig.Slot0.kI = 0;
+    topTurretConfig.Slot0.kD = 10;
+    topTurretConfig.Slot0.kV = 2;
 
-        turretMotorConfig = new SparkMaxConfig();
+    topTurretMotor.getConfigurator().apply(topTurretConfig);
 
-        turretMotorConfig.encoder
-            .velocityConversionFactor(1.0 / gearRatio);
+    topTurretMotor.setPosition(0);
 
-        turretMotorConfig.closedLoop
-            .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-            // Set PID values for position control.
-            // We don't need to pass a closed loop slot, as it will default to slot 0.
-            .p(0.0001)
-            .i(0)
-            .d(0)
-            .outputRange(-1, 1)
-            .feedForward
-                // kV is now in Volts, so we multiply by the nominal voltage (12V)
-                .kV(12.0 / 5767);
+    bottomTurretConfig = new TalonFXConfiguration();
+    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on slot 0
+    bottomTurretConfig.Slot0.kP = 1;
+    bottomTurretConfig.Slot0.kI = 0;
+    bottomTurretConfig.Slot0.kD = 10;
+    bottomTurretConfig.Slot0.kV = 2;
 
-            turretMotor1.configure(
-                turretMotorConfig, 
-                ResetMode.kResetSafeParameters, 
-                PersistMode.kNoPersistParameters
-            );
+    bottomTurretMotor.getConfigurator().apply(bottomTurretConfig);
 
-            turretMotor2.configure(
-                turretMotorConfig, 
-                ResetMode.kResetSafeParameters, 
-                PersistMode.kNoPersistParameters
-            );
+    bottomTurretMotor.setPosition(0);
+  }
 
-            SmartDashboard.setDefaultNumber("Turret 1 Target Velocity", 0);
+  public void setTurretSpeed(double speedProportion){
+    turretFeedMotor.setControl(turretFeedDC.withOutput(speedProportion));
+    topTurretMotor.setControl(topTurretDC.withOutput(speedProportion)); // Change Spin Directions in Phoenix Tuner X
+    bottomTurretMotor.setControl(bottomTurretDC.withOutput(speedProportion));
+  }
 
-            SmartDashboard.setDefaultNumber("Turret 2 Target Velocity", 0);
+  public void setTurretSpeed(double turretFeedSpeedProportion, double topTurretSpeedProportion, double bottomTurretSpeedProportion){
+    turretFeedMotor.setControl(turretFeedDC.withOutput(turretFeedSpeedProportion));
+    topTurretMotor.setControl(topTurretDC.withOutput(topTurretSpeedProportion)); // Change Spin Directions in Phoenix Tuner X
+    bottomTurretMotor.setControl(bottomTurretDC.withOutput(bottomTurretSpeedProportion));
+  }
 
-            SmartDashboard.setDefaultBoolean("STOP", false);
-    }
+  public Command setTurretSpeedCommand(double speedProportion){
+    return new InstantCommand(() -> setTurretSpeed(speedProportion)); 
+  }
 
-    // Run intake in velocity control (slot 0)
-    public void setVelocity1(double velocity1) {
-        turretClosedLoopController1.setSetpoint(
-            velocity1,
-            ControlType.kVelocity,
-            ClosedLoopSlot.kSlot0
-        );
-    }
+  @Override
+  public void periodic() {
+}
 
-    public void setVelocity2(double velocity2) {
-        turretClosedLoopController2.setSetpoint(
-            velocity2,
-            ControlType.kVelocity,
-            ClosedLoopSlot.kSlot0
-        );
-    }
-
-    @Override
-    public void periodic() {
-        SmartDashboard.putNumber("Turret 1 Actual Velocity", turretEncoder1.getVelocity());
-        SmartDashboard.putNumber("Turret 2 Actual Velocity", turretEncoder2.getVelocity());
-
-        if (SmartDashboard.getBoolean("STOP", false)){
-            SmartDashboard.putBoolean("STOP", false);
-            SmartDashboard.putNumber("Turret 1 Target Velocity", 0);
-            SmartDashboard.putNumber("Turret 2 Target Velocity", 0);
-        }
-
-        double turretTargetVelocity1 = SmartDashboard.getNumber("Turret 1 Target Velocity", 0);
-        setVelocity1(turretTargetVelocity1);
-        
-        double turretTargetVelocity2 = SmartDashboard.getNumber("Turret 2 Target Velocity", 0);
-        setVelocity2(turretTargetVelocity2);
-    }
-
-    @Override
-    public void simulationPeriodic() {
-       
-    }
-
+  @Override
+  public void simulationPeriodic() {
+    // This method will be called once per scheduler run during simulation
+  }
 }

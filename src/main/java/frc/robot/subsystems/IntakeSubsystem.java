@@ -1,15 +1,16 @@
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
+
 package frc.robot.subsystems;
 
-import com.revrobotics.PersistMode;
-import com.revrobotics.RelativeEncoder;
-import com.revrobotics.ResetMode;
-import com.revrobotics.spark.ClosedLoopSlot;
-import com.revrobotics.spark.FeedbackSensor;
-import com.revrobotics.spark.SparkBase.ControlType;
-import com.revrobotics.spark.SparkClosedLoopController;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.config.SparkMaxConfig;
+import static edu.wpi.first.units.Units.*;
+
+import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.configs.*;
+import com.ctre.phoenix6.hardware.*;
+import com.ctre.phoenix6.signals.*;
+import com.ctre.phoenix6.controls.DutyCycleOut;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -17,61 +18,44 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class IntakeSubsystem extends SubsystemBase {
-
-    private final SparkMax intakeMotor;
-    private final SparkMaxConfig intakeMotorConfig;
-    private final SparkClosedLoopController intakeClosedLoopController;
-    private final RelativeEncoder intakeEncoder;
-    
-
-    public IntakeSubsystem(int intakeID) {
-        intakeMotor = new SparkMax(intakeID, MotorType.kBrushless);
-        intakeClosedLoopController = intakeMotor.getClosedLoopController();
-        intakeEncoder = this.intakeMotor.getEncoder();
-
-        intakeMotorConfig = new SparkMaxConfig();
-
-        intakeMotorConfig.encoder
-            .velocityConversionFactor(1);
-
-        intakeMotorConfig.closedLoop
-            .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-            // Set PID values for position control.
-            // We don't need to pass a closed loop slot, as it will default to slot 0.
-            .p(0.0001)
-            .i(0)
-            .d(0)
-            .outputRange(-1, 1)
-            .feedForward
-                // kV is now in Volts, so we multiply by the nominal voltage (12V)
-                .kV(12.0 / 5767);
-
-            intakeMotor.configure(intakeMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
+  
+  private final CANBus canBus;
+  private final TalonFX intakeMotor;
+  private final DutyCycleOut intakeDC;
+  private final TalonFXConfiguration intakeConfig;
 
 
-            SmartDashboard.setDefaultNumber("Intake Target Velocity", 0);
-    }
+  public IntakeSubsystem(int intakeID) {
+    canBus = new CANBus("rio");
+    intakeMotor = new TalonFX(intakeID, canBus);
+    intakeDC = new DutyCycleOut(0);
 
-    // Run intake in velocity control (slot 0)
-    public void setVelocity(double velocity) {
-        intakeClosedLoopController.setSetpoint(
-            velocity,
-            ControlType.kVelocity,
-            ClosedLoopSlot.kSlot0
-        );
-    }
+    intakeConfig = new TalonFXConfiguration();
+    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on slot 0
+    intakeConfig.Slot0.kP = 1;
+    intakeConfig.Slot0.kI = 0;
+    intakeConfig.Slot0.kD = 10;
+    intakeConfig.Slot0.kV = 2;
 
-    @Override
-    public void periodic() {
-        SmartDashboard.putNumber("Intake Actual Velocity", intakeEncoder.getVelocity());
+    intakeMotor.getConfigurator().apply(intakeConfig);
 
-        double intakeTargetVelocity = SmartDashboard.getNumber("Intake Target Velocity", 0);
-        setVelocity(intakeTargetVelocity);
-    }
+    intakeMotor.setPosition(0);
+  }
 
-    @Override
-    public void simulationPeriodic() {
-       
-    }
+  public void setIntakeSpeed(double speedProportion){
+    intakeMotor.setControl(intakeDC.withOutput(speedProportion));
+  }
 
+  public Command setTalonFXSpeedCommand(double speedProportion){
+    return new InstantCommand(() -> setIntakeSpeed(speedProportion)); 
+  }
+
+  @Override
+  public void periodic() {
+}
+
+  @Override
+  public void simulationPeriodic() {
+    // This method will be called once per scheduler run during simulation
+  }
 }
