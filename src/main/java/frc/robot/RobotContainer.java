@@ -19,12 +19,13 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.PRTunerConstants;
-//import frc.robot.generated.ORTunerConstants;
+// import frc.robot.generated.ORTunerConstants;
 
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-import frc.robot.subsystems.OldTurretSubsystem;
-import frc.robot.subsystems.OldIntakeSubsystem;
+import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.TalonFXSubsystem;
+import frc.robot.subsystems.ConveyorSubsystem;
+import frc.robot.subsystems.TurretSubsystem;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * PRTunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -45,32 +46,31 @@ public class RobotContainer {
 
     public final Vision vision = new Vision(drivetrain::addVisionMeasurement);
 
-
-
     // private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
     // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
 
-    // private final TalonFXSubsystem talon1 = new TalonFXSubsystem(6);
-    // private final TalonFXSubsystem talon2 = new TalonFXSubsystem(7);
-    // private final TalonFXSubsystem talon3 = new TalonFXSubsystem(8);
+    private final TalonFXSubsystem talon = new TalonFXSubsystem(54);
+
+    // private final IntakeSubsystem intake = new IntakeSubsystem(51); // Change IDs in code
+    private final ConveyorSubsystem conveyor = new ConveyorSubsystem(52); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
+    // private final TurretSubsystem turret = new TurretSubsystem(53, 54, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
 
     public RobotContainer() {
         configureBindings();
     }
 
     private void configureBindings() {
-        // joystick.x().onTrue(new InstantCommand(() -> SmartDashboard.putNumber("Intake Target Velocity", 0.5)));
-        // joystick.x().onFalse(new InstantCommand(() -> SmartDashboard.putNumber("Intake Target Velocity", 0)));
+        joystick.x().onTrue(talon.setTalonFXSpeedCommand(8));
+        joystick.x().onFalse(talon.setTalonFXSpeedCommand(0));
 
-        // joystick.y().onTrue(turret.setShooterCommand(-0.80, 0.30));
-        // joystick.y().onFalse(turret.setShooterCommand(0.0, 0.00));
+        // joystick.y().onTrue(turret.setTurretSpeedCommand(0.3,0.3, 0.3));
+        // joystick.y().onFalse(turret.setTurretSpeedCommand(0.0));
 
-        // joystick.y().onTrue(talon1.setTalonFXSpeedCommand(-0.15));
-        // joystick.y().onFalse(talon1.setTalonFXSpeedCommand(0.00));
-        // joystick.y().onTrue(talon2.setTalonFXSpeedCommand(0.750));
-        // joystick.y().onFalse(talon2.setTalonFXSpeedCommand(0.00));
-        // joystick.b().onTrue(talon3.setTalonFXSpeedCommand(-0.50));
-        // joystick.b().onFalse(talon3.setTalonFXSpeedCommand(0.00));
+        joystick.b().onTrue(conveyor.setBeltSpeedCommand(0.1));
+        joystick.b().onFalse(conveyor.setBeltSpeedCommand(0.0));
+
+        // joystick.a().onTrue(intake.setIntakeSpeedCommand(0.3));
+        // joystick.a().onFalse(intake.setIntakeSpeedCommand(0.0));
 
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
@@ -93,18 +93,6 @@ public class RobotContainer {
         RobotModeTriggers.disabled().whileTrue(
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
-
-        joystick.a().whileTrue(drivetrain.applyRequest(() -> brake));
-        joystick.b().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))
-        ));
-
-        // Run SysId routines when holding back/start and X/Y.
-        // Note that each routine should be run exactly once in a single log.
-        joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-        joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-        joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-        joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         // Reset the field-centric heading on left bumper press.
         joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));

@@ -11,6 +11,7 @@ import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.hardware.*;
 import com.ctre.phoenix6.signals.*;
 import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -23,6 +24,9 @@ public class TurretSubsystem extends SubsystemBase {
   private final TalonFX turretFeedMotor;
   private final TalonFX topTurretMotor;
   private final TalonFX bottomTurretMotor;
+  private final VelocityVoltage turretFeedVV;
+  private final VelocityVoltage topTurretVV;
+  private final VelocityVoltage bottomTurretVV;
   private final DutyCycleOut turretFeedDC;
   private final DutyCycleOut topTurretDC;
   private final DutyCycleOut bottomTurretDC;
@@ -35,58 +39,77 @@ public class TurretSubsystem extends SubsystemBase {
     turretFeedMotor = new TalonFX(turretFeedID, canBus);
     topTurretMotor = new TalonFX(topTurretID, canBus);
     bottomTurretMotor = new TalonFX(bottomTurretID, canBus);
+    turretFeedVV = new VelocityVoltage(0).withSlot(0);
+    topTurretVV = new VelocityVoltage(0).withSlot(0);
+    bottomTurretVV = new VelocityVoltage(0).withSlot(0);
     turretFeedDC = new DutyCycleOut(0);
     topTurretDC = new DutyCycleOut(0);
     bottomTurretDC = new DutyCycleOut(0);
 
     turretFeedConfig = new TalonFXConfiguration();
-    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on slot 0
-    turretFeedConfig.Slot0.kP = 1;
-    turretFeedConfig.Slot0.kI = 0;
-    turretFeedConfig.Slot0.kD = 10;
-    turretFeedConfig.Slot0.kV = 2;
+    
+    turretFeedConfig.Slot0.kS = 0.1; // Add 0.1 V output to overcome static friction
+    turretFeedConfig.Slot0.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
+    turretFeedConfig.Slot0.kP = 0.11; // An error of 1 rps results in 0.11 V output
+    turretFeedConfig.Slot0.kI = 0; // no output for integrated error
+    turretFeedConfig.Slot0.kD = 0; // no output for error derivative
+
+    turretFeedConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    turretFeedConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
     turretFeedMotor.getConfigurator().apply(turretFeedConfig);
 
     turretFeedMotor.setPosition(0);
 
     topTurretConfig = new TalonFXConfiguration();
-    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on slot 0
-    topTurretConfig.Slot0.kP = 1;
-    topTurretConfig.Slot0.kI = 0;
-    topTurretConfig.Slot0.kD = 10;
-    topTurretConfig.Slot0.kV = 2;
+    
+    topTurretConfig.Slot0.kS = 0.1; // Add 0.1 V output to overcome static friction
+    topTurretConfig.Slot0.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
+    topTurretConfig.Slot0.kP = 0.11; // An error of 1 rps results in 0.11 V output
+    topTurretConfig.Slot0.kI = 0; // no output for integrated error
+    topTurretConfig.Slot0.kD = 0; // no output for error derivative
+
+    topTurretConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    topTurretConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
     topTurretMotor.getConfigurator().apply(topTurretConfig);
 
     topTurretMotor.setPosition(0);
 
     bottomTurretConfig = new TalonFXConfiguration();
-    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on slot 0
-    bottomTurretConfig.Slot0.kP = 1;
-    bottomTurretConfig.Slot0.kI = 0;
-    bottomTurretConfig.Slot0.kD = 10;
-    bottomTurretConfig.Slot0.kV = 2;
+
+    bottomTurretConfig.Slot0.kS = 0.1; // Add 0.1 V output to overcome static friction
+    bottomTurretConfig.Slot0.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
+    bottomTurretConfig.Slot0.kP = 0.11; // An error of 1 rps results in 0.11 V output
+    bottomTurretConfig.Slot0.kI = 0; // no output for integrated error
+    bottomTurretConfig.Slot0.kD = 0; // no output for error derivative
+
+    bottomTurretConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    bottomTurretConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
     bottomTurretMotor.getConfigurator().apply(bottomTurretConfig);
 
     bottomTurretMotor.setPosition(0);
   }
 
-  public void setTurretSpeed(double speedProportion){
-    turretFeedMotor.setControl(turretFeedDC.withOutput(speedProportion));
-    topTurretMotor.setControl(topTurretDC.withOutput(speedProportion)); // Change Spin Directions in Phoenix Tuner X
-    bottomTurretMotor.setControl(bottomTurretDC.withOutput(speedProportion));
+  public void setTurretSpeed(double RotationsPerSecond){
+    turretFeedMotor.setControl(turretFeedVV.withVelocity(RotationsPerSecond));
+    topTurretMotor.setControl(topTurretVV.withVelocity(RotationsPerSecond)); // Change Spin Directions in Phoenix Tuner X
+    bottomTurretMotor.setControl(bottomTurretVV.withVelocity(RotationsPerSecond));
   }
 
-  public void setTurretSpeed(double turretFeedSpeedProportion, double topTurretSpeedProportion, double bottomTurretSpeedProportion){
-    turretFeedMotor.setControl(turretFeedDC.withOutput(turretFeedSpeedProportion));
-    topTurretMotor.setControl(topTurretDC.withOutput(topTurretSpeedProportion)); // Change Spin Directions in Phoenix Tuner X
-    bottomTurretMotor.setControl(bottomTurretDC.withOutput(bottomTurretSpeedProportion));
+  public void setTurretSpeed(double turretFeedRotationsPerSecond, double topTurretRotationsPerSecond, double bottomTurretRotationsPerSecond){
+    turretFeedMotor.setControl(turretFeedVV.withVelocity(turretFeedRotationsPerSecond));
+    topTurretMotor.setControl(topTurretVV.withVelocity(topTurretRotationsPerSecond)); // Change Spin Directions in Phoenix Tuner X
+    bottomTurretMotor.setControl(bottomTurretVV.withVelocity(bottomTurretRotationsPerSecond));
   }
 
-  public Command setTurretSpeedCommand(double speedProportion){
-    return new InstantCommand(() -> setTurretSpeed(speedProportion)); 
+  public Command setTurretSpeedCommand(double RotationsPerSecond){
+    return new InstantCommand(() -> setTurretSpeed(RotationsPerSecond)); 
+  }
+
+  public Command setTurretSpeedCommand(double turretFeedRotationsPerSecond, double topTurretRotationsPerSecond, double bottomTurretRotationsPerSecondn){
+    return new InstantCommand(() -> setTurretSpeed(turretFeedRotationsPerSecond, topTurretRotationsPerSecond, bottomTurretRotationsPerSecondn)); 
   }
 
   @Override
@@ -95,6 +118,5 @@ public class TurretSubsystem extends SubsystemBase {
 
   @Override
   public void simulationPeriodic() {
-    // This method will be called once per scheduler run during simulation
   }
 }

@@ -11,6 +11,7 @@ import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.hardware.*;
 import com.ctre.phoenix6.signals.*;
 import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -21,6 +22,7 @@ public class IntakeSubsystem extends SubsystemBase {
   
   private final CANBus canBus;
   private final TalonFX intakeMotor;
+  private final VelocityVoltage intakeVV;
   private final DutyCycleOut intakeDC;
   private final TalonFXConfiguration intakeConfig;
 
@@ -28,26 +30,31 @@ public class IntakeSubsystem extends SubsystemBase {
   public IntakeSubsystem(int intakeID) {
     canBus = new CANBus("rio");
     intakeMotor = new TalonFX(intakeID, canBus);
+    intakeVV = new VelocityVoltage(0).withSlot(0);
     intakeDC = new DutyCycleOut(0);
 
     intakeConfig = new TalonFXConfiguration();
-    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on slot 0
-    intakeConfig.Slot0.kP = 1;
-    intakeConfig.Slot0.kI = 0;
-    intakeConfig.Slot0.kD = 10;
-    intakeConfig.Slot0.kV = 2;
+
+    intakeConfig.Slot0.kS = 0.1; // Add 0.1 V output to overcome static friction
+    intakeConfig.Slot0.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
+    intakeConfig.Slot0.kP = 0.11; // An error of 1 rps results in 0.11 V output
+    intakeConfig.Slot0.kI = 0; // no output for integrated error
+    intakeConfig.Slot0.kD = 0; // no output for error derivative
+
+    intakeConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    intakeConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
     intakeMotor.getConfigurator().apply(intakeConfig);
 
     intakeMotor.setPosition(0);
   }
 
-  public void setIntakeSpeed(double speedProportion){
-    intakeMotor.setControl(intakeDC.withOutput(speedProportion));
+  public void setIntakeSpeed(double RotationsPerSecond){
+    intakeMotor.setControl(intakeVV.withVelocity(RotationsPerSecond));
   }
 
-  public Command setTalonFXSpeedCommand(double speedProportion){
-    return new InstantCommand(() -> setIntakeSpeed(speedProportion)); 
+  public Command setIntakeSpeedCommand(double RotationsPerSecond){
+    return new InstantCommand(() -> setIntakeSpeed(RotationsPerSecond)); 
   }
 
   @Override
@@ -56,6 +63,5 @@ public class IntakeSubsystem extends SubsystemBase {
 
   @Override
   public void simulationPeriodic() {
-    // This method will be called once per scheduler run during simulation
   }
 }
