@@ -29,7 +29,7 @@ public class TalonFXSubsystem extends SubsystemBase {
 
   public TalonFXSubsystem(int talonFXID) {
     canBus = new CANBus("rio");
-    talonFX = new TalonFX(talonFXID);
+    talonFX = new TalonFX(talonFXID, canBus);
     vv = new VelocityVoltage(0).withSlot(0);
     dc = new DutyCycleOut(0);
 

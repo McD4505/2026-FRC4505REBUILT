@@ -29,7 +29,7 @@ public class ConveyorSubsystem extends SubsystemBase {
 
   public ConveyorSubsystem(int beltID) {
     canBus = new CANBus("rio");
-    beltMotor = new TalonFX(beltID);
+    beltMotor = new TalonFX(beltID, canBus);
     beltVV = new VelocityVoltage(0).withSlot(0);
     beltDC = new DutyCycleOut(0);
 
