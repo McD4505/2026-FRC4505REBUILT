@@ -44,6 +44,12 @@ public class TalonFXSubsystem extends SubsystemBase {
     talonFXConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     talonFXConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
+    // enable supply and stator current limit
+    talonFXConfig.CurrentLimits.SupplyCurrentLimit = 25;
+    talonFXConfig.CurrentLimits.StatorCurrentLimit = 30;
+    talonFXConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    talonFXConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+
     talonFX.getConfigurator().apply(talonFXConfig);
 
     talonFX.setPosition(0);

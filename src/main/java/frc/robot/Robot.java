@@ -54,7 +54,8 @@ public class Robot extends TimedRobot {
 
     @Override
     public void autonomousInit() {
-        Pose2d startPose = new Pose2d(3.652774, 0, Rotation2d.kZero); // Start line is out 156.06 in to 158.06 in ()
+        //Pose2d startPose = new Pose2d(3.652774, 0, Rotation2d.kZero); // Start line is out 156.06 in to 158.06 in ()
+        Pose2d startPose = new Pose2d(0, 0, Rotation2d.kZero);
         m_robotContainer.drivetrain.resetPose(startPose);
 
         m_autonomousCommand = m_robotContainer.getAutonomousCommand();

@@ -26,7 +26,6 @@ public class IntakeSubsystem extends SubsystemBase {
   private final DutyCycleOut intakeDC;
   private final TalonFXConfiguration intakeConfig;
 
-
   public IntakeSubsystem(int intakeID) {
     canBus = new CANBus("rio");
     intakeMotor = new TalonFX(intakeID, canBus);
@@ -43,6 +42,12 @@ public class IntakeSubsystem extends SubsystemBase {
 
     intakeConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     intakeConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+
+    // enable supply and stator current limit
+    intakeConfig.CurrentLimits.SupplyCurrentLimit = 25;
+    intakeConfig.CurrentLimits.StatorCurrentLimit = 30;
+    intakeConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    intakeConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 
     intakeMotor.getConfigurator().apply(intakeConfig);
 
