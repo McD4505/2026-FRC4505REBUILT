@@ -54,6 +54,7 @@ public class Vision extends SubsystemBase {
       this.camera = new PhotonCamera(name);
       this.robotToCamera = transform;
       this.poseEstimator = new PhotonPoseEstimator(kTagFieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, transform);
+      this.poseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
     }
   }
   
@@ -62,12 +63,9 @@ public class Vision extends SubsystemBase {
   private EstimateConsumer estConsumer; //accepts pose
   private final Supplier<Pose2d> poseProvider; //gives pose
 
-  private final AprilTagFieldLayout kTagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
-  public static final Transform3d kRobotToCam =
-                new Transform3d(new Translation3d(0.2921, 0.0, 0.2667), new Rotation3d(0, 0, 0));
-
+  private final AprilTagFieldLayout kTagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
+  public static final Transform3d kRobotToCam = new Transform3d();
   private Matrix<N3,N1> curStdDevs;
-  
   StructPublisher<Pose3d> publisher = NetworkTableInstance.getDefault()
     .getStructTopic("VisionPose", Pose3d.struct).publish();
   
@@ -78,10 +76,12 @@ public class Vision extends SubsystemBase {
   // (Fake values. Experiment and determine estimation noise on an actual robot.)
   public static final Matrix<N3, N1> kSingleTagStdDevs = VecBuilder.fill(0.5, 0.5, 1);
   public static final Matrix<N3, N1> kMultiTagStdDevs = VecBuilder.fill(0.1, 0.1, 0.15);
+  private final Field2d visionField = new Field2d();
 
   private VisionSystemSim visionSim;
 
   public Vision(EstimateConsumer estConsumer, Supplier<Pose2d> poseProvider) {
+    SmartDashboard.putData("Vision Field", visionField);
     this.poseProvider = poseProvider;
     this.estConsumer = estConsumer;
         // Initialize cameras with their transforms relative to robot center
@@ -90,7 +90,6 @@ public class Vision extends SubsystemBase {
       new Translation3d(0.2921, 0.0, 0.2667), 
       new Rotation3d(0, 0, 0)
     );
-    
     // Camera 2: Right side (example - adjust based on your actual camera position)
     Transform3d rightCameraTransform = new Transform3d(
       new Translation3d(0.2921, -0.3, 0.2667), // Example offset: 30cm to the right
@@ -98,7 +97,7 @@ public class Vision extends SubsystemBase {
     );
     
     cameras = new VisionCamera[] {
-      new VisionCamera("color", leftCameraTransform),      // Your existing camera
+      new VisionCamera("aprilTagCamera1", leftCameraTransform),      // Your existing camera
       // new VisionCamera("color_right", rightCameraTransform) // New camera (adjust name/position)
     };
     if (Robot.isSimulation()) {
@@ -114,8 +113,8 @@ public class Vision extends SubsystemBase {
       cameraProp.setCalibError(0, 0);
       cameraProp.setAvgLatencyMs(0);
       cameraProp.setLatencyStdDevMs(0);
-      cameraProp.setCalibration(640, 480, Rotation2d.fromDegrees(90));
-      cameraProp.setFPS(15);
+      cameraProp.setCalibration(640, 480, Rotation2d.fromDegrees(0));
+      cameraProp.setFPS(30);
       
       visionCam.cameraSim = new PhotonCameraSim(visionCam.camera, cameraProp);
       visionSim.addCamera(visionCam.cameraSim, visionCam.robotToCamera);
@@ -133,33 +132,70 @@ public Pose2d getTagPose(int tagId) {
   }
   return null;
 }
-  private void processCamera(VisionCamera visionCam) {
-    Optional<EstimatedRobotPose> visionEst = Optional.empty();
-    
-    for (var result : visionCam.camera.getAllUnreadResults()) {
-      visionEst = visionCam.poseEstimator.estimateCoprocMultiTagPose(result);
-      if (visionEst.isEmpty()) {
-        visionEst = visionCam.poseEstimator.estimateLowestAmbiguityPose(result);
-      }
-      
-      updateEstimationStdDevs(visionEst, result.getTargets());
-      
-      if (Robot.isSimulation()) {
-        visionEst.ifPresentOrElse(
-          est -> getSimDebugField()
-            .getObject("VisionEstimation_" + visionCam.cameraName)
-            .setPose(est.estimatedPose.toPose2d()),
-          () -> getSimDebugField().getObject("VisionEstimation_" + visionCam.cameraName).setPoses()
-        );
-      }
-      
-      visionEst.ifPresent(est -> {
-        publisher.set(est.estimatedPose);
-        var estStdDevs = getEstimationStdDevs();
-        estConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
-      });
+private void processCamera(VisionCamera visionCam) {
+    var result = visionCam.camera.getLatestResult();
+
+    // --- BASIC TARGET INFO ---
+    SmartDashboard.putBoolean(visionCam.cameraName + "/HasTargets", result.hasTargets());
+    SmartDashboard.putNumber(visionCam.cameraName + "/TargetCount", result.getTargets().size());
+
+    Optional<EstimatedRobotPose> visionEst =
+        visionCam.poseEstimator.estimateLowestAmbiguityPose(result);
+
+    boolean poseSuccess = visionEst.isPresent();
+    SmartDashboard.putBoolean(visionCam.cameraName + "/PoseSuccess", poseSuccess);
+
+    if (!poseSuccess) {
+        SmartDashboard.putString(visionCam.cameraName + "/PoseStatus", "NO POSE");
+        return;
     }
-  }
+
+    // --- POSE DATA ---
+    EstimatedRobotPose est = visionEst.get();
+    Pose2d pose = est.estimatedPose.toPose2d();
+    visionField.setRobotPose(pose);
+
+    SmartDashboard.putString(visionCam.cameraName + "/PoseStatus", "POSE OK");
+    SmartDashboard.putNumber(visionCam.cameraName + "/Pose/X", pose.getX());
+    SmartDashboard.putNumber(visionCam.cameraName + "/Pose/Y", pose.getY());
+    SmartDashboard.putNumber(visionCam.cameraName + "/Pose/RotationDeg",
+            pose.getRotation().getDegrees());
+
+    // --- MULTI-TAG DEBUG INFO ---
+    SmartDashboard.putNumber(
+        visionCam.cameraName + "/TagsUsed",
+        result.getTargets().size()
+    );
+
+    // Calculate average distance to tags
+    double avgDist = 0;
+    int count = 0;
+
+    for (var tgt : result.getTargets()) {
+        var tagPose = kTagFieldLayout.getTagPose(tgt.getFiducialId());
+        if (tagPose.isEmpty()) continue;
+
+        count++;
+        avgDist += tagPose.get()
+            .toPose2d()
+            .getTranslation()
+            .getDistance(pose.getTranslation());
+    }
+
+    if (count > 0) {
+        avgDist /= count;
+        SmartDashboard.putNumber(visionCam.cameraName + "/AvgTagDistance", avgDist);
+    }
+
+    // Update std devs and send to drivetrain
+    updateEstimationStdDevs(visionEst, result.getTargets());
+
+    estConsumer.accept(
+        pose,
+        est.timestampSeconds,
+        getEstimationStdDevs()
+    );
+}
 
   public int getTagId(boolean isRed) {
     PhotonTrackedTarget bestTarget = null;
@@ -210,36 +246,11 @@ public Pose2d getTagPose(int tagId) {
     // Query some boolean state, such as a digital sensor.
     return false;
   }
-  public Optional<Pose2d> getEstimatedRobotPose() {
-    for (VisionCamera visionCam : cameras) {
-      var result = visionCam.camera.getLatestResult();
-      if (!result.hasTargets()) continue;
-
-      var estimate = visionCam.poseEstimator.estimateCoprocMultiTagPose(result);
-      if (estimate.isEmpty()) {
-          estimate = visionCam.poseEstimator.estimateLowestAmbiguityPose(result);
-      }
-
-      if (estimate.isPresent()) {
-          return Optional.of(estimate.get().estimatedPose.toPose2d());
-      }
-    }
-    return Optional.empty();
-  }
 
   @Override
   public void periodic() {
     for (VisionCamera visionCam : cameras) {
       processCamera(visionCam);
-    }
-    var poseOpt = getEstimatedRobotPose();
-    if (poseOpt.isPresent()) {
-      Pose2d pose = poseOpt.get();
-      SmartDashboard.putNumber("Vision X", pose.getX());
-      SmartDashboard.putNumber("Vision Y", pose.getY());
-      SmartDashboard.putNumber("Vision Rotation", pose.getRotation().getDegrees());
-    } else {
-      SmartDashboard.putString("Vision Status", "No Pose");
     }
   }
       /**

@@ -32,6 +32,7 @@ import frc.robot.subsystems.Vision;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.TalonFXSubsystem;
 
 public class RobotContainer {
 
@@ -61,6 +62,9 @@ public class RobotContainer {
     public Shooter shooter;
     public final Boolean isRed = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
 
+    // private final TalonFXSubsystem talon1 = new TalonFXSubsystem(6);
+    // private final TalonFXSubsystem talon2 = new TalonFXSubsystem(7);
+
     public RobotContainer() {
                 // Build an auto chooser. This will use Commands.none() as the default option.
         autoChooser = AutoBuilder.buildAutoChooser();
@@ -78,6 +82,11 @@ public class RobotContainer {
         // and Y is defined as to the left according to WPILib convention.
 
         if (isTestingShooter) {
+            // joystick.y().onTrue(talon1.setTalonFXSpeedCommand(-0.50));
+            // joystick.y().onFalse(talon1.setTalonFXSpeedCommand(0.00));
+            // joystick.y().onTrue(talon2.setTalonFXSpeedCommand(0.50));
+            // joystick.y().onFalse(talon2.setTalonFXSpeedCommand(0.00));
+
 
         } else {
             drivetrain.setDefaultCommand(
@@ -104,9 +113,9 @@ public class RobotContainer {
 
           // Run SysId routines when holding back/start and X/Y.
           // Note that each routine should be run exactly once in a single log.
-          joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+        //   joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
           joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-          joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+        //   joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
           joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
           // Reset the field-centric heading on left bumper press.
@@ -115,13 +124,6 @@ public class RobotContainer {
           drivetrain.registerTelemetry(logger::telemeterize);
         }
     }
-public void initializeRobotPoseFromVision() {
-    vision.getEstimatedRobotPose().ifPresent(pose -> {
-    drivetrain.resetPose(pose);
-    System.out.println("Initialized pose from vision: " + pose);
-});
-
-}
 private Command pathFindToAprilTag() {
     // Defer allows us to calculate the target Pose WHEN the button is pressed
     return Commands.defer(() -> {

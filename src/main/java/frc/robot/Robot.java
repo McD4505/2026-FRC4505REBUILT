@@ -51,7 +51,7 @@ public class Robot extends TimedRobot {
         if (m_autonomousCommand != null) {
             CommandScheduler.getInstance().schedule(m_autonomousCommand);
         }
-        m_robotContainer.initializeRobotPoseFromVision();
+        // m_robotContainer.initializeRobotPoseFromVision();
     }
 
     @Override
@@ -61,12 +61,7 @@ public class Robot extends TimedRobot {
     public void autonomousExit() {}
 
     @Override
-    public void teleopInit() {
-        if (m_autonomousCommand != null) {
-            CommandScheduler.getInstance().cancel(m_autonomousCommand);
-        }
-        m_robotContainer.initializeRobotPoseFromVision();
-    }
+    public void teleopInit() {}
 
     @Override
     public void teleopPeriodic() {}
