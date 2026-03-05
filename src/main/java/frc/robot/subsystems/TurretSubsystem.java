@@ -53,7 +53,7 @@ public class TurretSubsystem extends SubsystemBase {
     topTurretConfig.Slot0.kI = 0; // no output for integrated error
     topTurretConfig.Slot0.kD = 0; // no output for error derivative
 
-    topTurretConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    topTurretConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     topTurretConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
     // enable supply and stator current limit
@@ -74,7 +74,7 @@ public class TurretSubsystem extends SubsystemBase {
     bottomTurretConfig.Slot0.kI = 0; // no output for integrated error
     bottomTurretConfig.Slot0.kD = 0; // no output for error derivative
 
-    bottomTurretConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    bottomTurretConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     bottomTurretConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
     // enable supply and stator current limit
@@ -127,6 +127,8 @@ public class TurretSubsystem extends SubsystemBase {
     double t_x = (targetPose3d.getX() - turretPose3d.getX())/x_velocity;
     double t_y = (y_velocity + (Math.pow(y_velocity, 2) - 2 * g * targetPose3d.getY() - turretPose3d.getY()))/-1 * g;
     double t_z = (targetPose3d.getZ() - turretPose3d.getZ())/z_velocity;
+
+    
   }
 
   @Override

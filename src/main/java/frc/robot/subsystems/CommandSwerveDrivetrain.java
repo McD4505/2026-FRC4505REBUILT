@@ -270,8 +270,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // Create a list of waypoints from poses. Each pose represents one waypoint.
         // The rotation component of the pose should be the direction of travel. Do not use holonomic rotation.
         List<Waypoint> waypoints = PathPlannerPath.waypointsFromPoses(
-                new Pose2d(getState().Pose.getX(), getState().Pose.getY(), Rotation2d.fromRadians(Math.atan2(targetPose.getY()-getState().Pose.getY(), targetPose.getX()-getState().Pose.getX()))),
-                new Pose2d(targetPose.getX(), targetPose.getY(), Rotation2d.fromRadians(Math.atan2(targetPose.getY()-getState().Pose.getY(), targetPose.getX()-getState().Pose.getX())))
+            getState().Pose,
+            targetPose
         );
 
         // PathConstraints constraints = new PathConstraints(4.5, 3.0, 2*Math.PI, Math.PI); // The constraints for this path.

@@ -26,6 +26,7 @@ import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.TalonFXSubsystem;
 import frc.robot.subsystems.ConveyorSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
+import frc.robot.subsystems.Vision;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * PRTunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -64,14 +65,14 @@ public class RobotContainer {
         // joystick.x().onTrue(talon.setTalonFXSpeedCommand(8));
         // joystick.x().onFalse(talon.setTalonFXSpeedCommand(0));
 
-        joystick.y().onTrue(turret.setTurretSpeedCommand(27.5, 27.5));
+        joystick.y().onTrue(turret.setTurretSpeedCommand(50.0, 50.0));
         joystick.y().onFalse(turret.setTurretSpeedCommand(0.0));
 
-        joystick.b().onTrue(feeder.setIntakeSpeedCommand(-20));
-        joystick.b().onFalse(feeder.setIntakeSpeedCommand(0));
+        joystick.b().onTrue(feeder.setIntakeSpeedCommand(-75.0));
+        joystick.b().onFalse(feeder.setIntakeSpeedCommand(0.0));
 
-        joystick.a().onTrue(belt.setIntakeSpeedCommand(80));
-        joystick.a().onFalse(belt.setIntakeSpeedCommand(0));
+        joystick.a().onTrue(belt.setIntakeSpeedCommand(100.0));
+        joystick.a().onFalse(belt.setIntakeSpeedCommand(0.0));
 
         // joystick.b().onTrue(conveyor.setBeltSpeedCommand(80.0, 20.0));
         // joystick.b().onFalse(conveyor.setBeltSpeedCommand(0.0));
@@ -79,7 +80,7 @@ public class RobotContainer {
         // joystick.a().onTrue(intake.setIntakeSpeedCommand(0.3));
         // joystick.a().onFalse(intake.setIntakeSpeedCommand(0.0));
 
-        // Note that X is defined as forward according to WPILib convention,
+        // Note that X is defined as forward according to WPILib convention,                                                                                                                                                                                                                                                                                                                ;/
         // and Y is defined as to the left according to WPILib convention.
         drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
@@ -92,7 +93,7 @@ public class RobotContainer {
 
 
         joystick.povUp().onTrue(new InstantCommand(() -> drivetrain.setTargetPose(10)));
-        joystick.povUp().onTrue(drivetrain.pathfind());
+        joystick.povDown().onTrue(drivetrain.pathfind());
 
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
