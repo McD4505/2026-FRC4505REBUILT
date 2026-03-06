@@ -12,6 +12,7 @@ import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds;
 import com.ctre.phoenix6.swerve.utility.WheelForceCalculator.Feedforwards;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
@@ -21,6 +22,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
@@ -67,6 +69,16 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
     /* Keep track if we've ever applied the operator perspective before or not */
     private boolean m_hasAppliedOperatorPerspective = false;
+        private static final Translation2d BLUE_HUB =
+        new Translation2d(
+            Units.inchesToMeters(182.11),
+            Units.inchesToMeters(157.74)
+        );
+    private static final Translation2d RED_HUB =
+        new Translation2d(
+            Units.inchesToMeters(469.11),
+            Units.inchesToMeters(157.74)
+        );
 
     private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
 
@@ -74,6 +86,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
+    private final ApplyRobotSpeeds m_autoRequest = new ApplyRobotSpeeds();
 
     private Pose2d targetPose = new Pose2d();
     PathConstraints constraints = new PathConstraints(4.5, 3.0, Units.degreesToRadians(360), Units.degreesToRadians(180));
@@ -156,6 +169,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /* The SysId routine to test */
     private SysIdRoutine m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
 
+
     /**
      * Constructs a CTRE SwerveDrivetrain using the specified constants.
      * <p>
@@ -171,6 +185,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, modules);
+
         if (Utils.isSimulation()) {
             startSimThread();
         }
@@ -229,10 +244,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, odometryUpdateFrequency, odometryStandardDeviation, visionStandardDeviation, modules);
+        configureAutoBuilder();
         if (Utils.isSimulation()) {
             startSimThread();
         }
-        configureAutoBuilder();
     }
 
     private void configureAutoBuilder() {
@@ -242,7 +257,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             AutoBuilder.configure(
                 () -> getState().Pose,      // Supplier of current robot pose
                 this::resetPose,            // Consumer for seeding pose against auto
-                () -> getState().Speeds,    // Supplier of current robot speeds
+                () -> getKinematics().toChassisSpeeds(getState().ModuleStates),    // Supplier of current robot speeds
                 // Consumer of ChassisSpeeds and feedforwards to drive the robot
                 (speeds, feedforwards) -> setControl(
                     m_pathApplyRobotSpeeds.withSpeeds(speeds)
@@ -264,6 +279,22 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             DriverStation.reportError("Failed to load PathPlanner config and configure AutoBuilder", ex.getStackTrace());
         }
 
+    }
+            // pathfinding commands
+    public Command pathfindToPose(Pose2d pose) {
+        // Create the constraints to use while pathfinding
+        PathConstraints constraints = new PathConstraints(
+                4.5, 4,  // 4 m/s^2
+                Units.degreesToRadians(540/2), Units.degreesToRadians(720));
+    
+        // Since AutoBuilder is configured, we can use it to build pathfinding commands
+        Command pathfindingCommand = AutoBuilder.pathfindToPose(
+                pose,
+                constraints,
+                0.0 // Goal end velocity in meters/sec
+        );
+    
+        return pathfindingCommand;
     }
 
     public Command pathfind(){
@@ -304,6 +335,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      */
     public Command applyRequest(Supplier<SwerveRequest> request) {
         return run(() -> this.setControl(request.get()));
+    }
+    public void driveRobotRelative(ChassisSpeeds speeds) {
+        setControl(m_autoRequest.withSpeeds(speeds));
     }
 
     /**
@@ -347,6 +381,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 m_hasAppliedOperatorPerspective = true;
             });
         }
+          SmartDashboard.putNumber("DistanceToHub", getDistanceToHub(DriverStation.getAlliance().orElse(Alliance.Blue)));
+          SmartDashboard.putNumber("Heading", getState().Pose.getRotation().getDegrees());
     }
 
     private void startSimThread() {
@@ -407,5 +443,17 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     @Override
     public Optional<Pose2d> samplePoseAt(double timestampSeconds) {
         return super.samplePoseAt(Utils.fpgaToCurrentTime(timestampSeconds));
+    }
+    public Pose2d getPose() {
+        return this.getState().Pose;
+    }
+    public double getDistanceToHub(Object color) {
+        Pose2d robotPose = getPose();
+        if (color == Alliance.Red) {
+            return robotPose.getTranslation().getDistance(RED_HUB);
+        }
+        else {
+            return robotPose.getTranslation().getDistance(BLUE_HUB);
+        }
     }
 }

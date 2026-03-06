@@ -33,37 +33,50 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
+
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
+import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
 public class Vision extends SubsystemBase{
     private final PhotonCamera camera;
     private final PhotonPoseEstimator photonEstimator;
     private Matrix<N3, N1> curStdDevs;
+
     private final EstimateConsumer estConsumer;
+    private final Supplier<Pose2d> poseSupplier;
+
+    private List<PhotonPipelineResult> latestResult;
 
     // Simulation
     private PhotonCameraSim cameraSim;
     private VisionSystemSim visionSim;
 
+    private final Field2d visionField = new Field2d();
+
     /**
      * @param estConsumer Lamba that will accept a pose estimate and pass it to your desired {@link
      *     edu.wpi.first.math.estimator.SwerveDrivePoseEstimator}
      */
-    public Vision(EstimateConsumer estConsumer) {
+    public Vision(EstimateConsumer estConsumer,  Supplier<Pose2d> poseSupplier) { //pose supplier for vision sim
         this.estConsumer = estConsumer;
+        this.poseSupplier = poseSupplier;
         camera = new PhotonCamera(kCameraName);
         photonEstimator = new PhotonPoseEstimator(kTagLayout, kRobotToCam);
+
+        SmartDashboard.putData("Vision Field", visionField);
 
         // ----- Simulation
         if (Robot.isSimulation()) {
@@ -73,9 +86,9 @@ public class Vision extends SubsystemBase{
             visionSim.addAprilTags(kTagLayout);
             // Create simulated camera properties. These can be set to mimic your actual camera.
             var cameraProp = new SimCameraProperties();
-            cameraProp.setCalibration(960, 720, Rotation2d.fromDegrees(90));
+            cameraProp.setCalibration(640, 480, Rotation2d.fromDegrees(90));
             cameraProp.setCalibError(0.35, 0.10);
-            cameraProp.setFPS(15);
+            cameraProp.setFPS(30);
             cameraProp.setAvgLatencyMs(50);
             cameraProp.setLatencyStdDevMs(15);
             // Create a PhotonCameraSim which will update the linked PhotonCamera's values with visible
@@ -83,20 +96,23 @@ public class Vision extends SubsystemBase{
             cameraSim = new PhotonCameraSim(camera, cameraProp);
             // Add the simulated camera to view the targets on this simulated field.
             visionSim.addCamera(cameraSim, kRobotToCam);
-
             cameraSim.enableDrawWireframe(true);
         }
     }
 
+
     @Override
     public void periodic() {
         Optional<EstimatedRobotPose> visionEst = Optional.empty();
-        for (var result : camera.getAllUnreadResults()) {
+        latestResult = camera.getAllUnreadResults();
+        for (var result : latestResult) {
             visionEst = photonEstimator.estimateCoprocMultiTagPose(result);
             if (visionEst.isEmpty()) {
                 visionEst = photonEstimator.estimateLowestAmbiguityPose(result);
             }
             updateEstimationStdDevs(visionEst, result.getTargets());
+                        // --- POSE DATA ---
+
 
             if (Robot.isSimulation()) {
                 visionEst.ifPresentOrElse(
@@ -113,11 +129,35 @@ public class Vision extends SubsystemBase{
                     est -> {
                         // Change our trust in the measurement based on the tags we can see
                         var estStdDevs = getEstimationStdDevs();
-
-                        estConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
+                        Pose2d pose = est.estimatedPose.toPose2d();
+                        visionField.setRobotPose(pose);
+                        estConsumer.accept(pose, est.timestampSeconds, estStdDevs);
                     });
         }
     }
+public Pose2d getTagPose(int tagId) {
+    if (tagId <= 0) return null;
+    
+    var tagOpt = kTagLayout.getTagPose(tagId);
+    if (tagOpt.isPresent()) {
+        return tagOpt.get().toPose2d();
+    }
+    return null;
+}
+public int getTagId() {
+    PhotonTrackedTarget bestTarget = null;
+
+    for (var result : latestResult) {
+        if (!result.hasTargets()) continue;
+        for (var target : result.getTargets()) {
+            if (bestTarget == null || target.getPoseAmbiguity() < bestTarget.getPoseAmbiguity()) {
+                bestTarget = target;
+            }
+        }
+    }
+    if (bestTarget == null) return 0;
+    return bestTarget.getFiducialId();
+}
 
     /**
      * Calculates new standard deviations This algorithm is a heuristic that creates dynamic standard
@@ -168,6 +208,8 @@ public class Vision extends SubsystemBase{
         }
     }
 
+
+
     /**
      * Returns the latest standard deviations of the estimated pose from {@link
      * #getEstimatedGlobalPose()}, for use with {@link
@@ -180,8 +222,8 @@ public class Vision extends SubsystemBase{
 
     // ----- Simulation
 
-    public void simulationPeriodic(Pose2d robotSimPose) {
-        visionSim.update(robotSimPose);
+    public void simulationPeriodic() {
+        visionSim.update(poseSupplier.get());
     }
 
     /** Reset pose history of the robot in the vision system simulation. */

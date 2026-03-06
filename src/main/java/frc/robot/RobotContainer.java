@@ -6,11 +6,18 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.Set;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.pathplanner.lib.auto.AutoBuilder;
 
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -45,7 +52,10 @@ public class RobotContainer {
 
     public final CommandSwerveDrivetrain drivetrain = PRTunerConstants.createDrivetrain();
 
-    public final Vision vision = new Vision(drivetrain::addVisionMeasurement);
+    
+    private final SendableChooser<Command> autoChooser;
+
+    public final Vision vision = new Vision(drivetrain::addVisionMeasurement, drivetrain::getPose);
 
     // private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
     // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
@@ -58,6 +68,8 @@ public class RobotContainer {
     private final TurretSubsystem turret = new TurretSubsystem(54, 53); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
 
     public RobotContainer() {
+        autoChooser = AutoBuilder.buildAutoChooser();
+        SmartDashboard.putData("Auto Chooser", autoChooser);
         configureBindings();
     }
 
@@ -94,6 +106,7 @@ public class RobotContainer {
 
         joystick.povUp().onTrue(new InstantCommand(() -> drivetrain.setTargetPose(10)));
         joystick.povDown().onTrue(drivetrain.pathfind());
+        joystick.povLeft().onTrue(pathFindToAprilTag());
 
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
@@ -108,22 +121,39 @@ public class RobotContainer {
         drivetrain.registerTelemetry(logger::telemeterize);
     }
 
+    private Command pathFindToAprilTag() {
+        // Defer allows us to calculate the target Pose WHEN the button is pressed
+        return Commands.defer(() -> {
+            
+            int visibleTagID = vision.getTagId();
+
+            // 1. Safety Check: Did we see a tag?
+            if (visibleTagID <= 0) {
+                // Blink LEDs or print error, don't move
+                System.out.println("No AprilTag visible!");
+                return Commands.none(); 
+            }
+
+            Pose2d tagPose = vision.getTagPose(visibleTagID);
+            
+            // 2. Safety Check: Is the ID valid in the layout?
+            if (tagPose == null) {
+                return Commands.none();
+            }
+
+            // 3. Create the pathfinding command
+            // Inside the Defer block
+            Transform2d offset = new Transform2d(new Translation2d(1.0, 0), new Rotation2d(0));
+            // This calculates a point 1 meter "out" from the tag's face
+            Pose2d safeScoringPose = tagPose.transformBy(offset); 
+            
+            return drivetrain.pathfindToPose(safeScoringPose);
+
+        }, Set.of(drivetrain)); // Require the drivetrain
+    }
+
+
     public Command getAutonomousCommand() {
-        // Simple drive forward auton
-        final var idle = new SwerveRequest.Idle();
-        return Commands.sequence(
-            // Reset our field centric heading to match the robot
-            // facing away from our alliance station wall (0 deg).
-            drivetrain.runOnce(() -> drivetrain.seedFieldCentric(Rotation2d.kZero)),
-            // Then slowly drive forward (away from us) for 5 seconds.
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(0.5)
-                    .withVelocityY(0)
-                    .withRotationalRate(0)
-            )
-            .withTimeout(5.0),
-            // Finally idle for the rest of auton
-            drivetrain.applyRequest(() -> idle)
-        );
+        return autoChooser.getSelected();
     }
 }

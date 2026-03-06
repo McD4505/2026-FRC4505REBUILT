@@ -39,10 +39,21 @@ import edu.wpi.first.math.util.Units;
 
 public class Constants {
     public static class Vision {
-        public static final String kCameraName = "aprilTagCamera1";
+        public static final String kCameraName = "color";
         // Cam mounted facing forward, half a meter forward of center, half a meter up from center.
-        public static final Transform3d kRobotToCam =
-                new Transform3d(new Translation3d(0.2921, 0.0, 0.2667), new Rotation3d(0, Math.PI, 0));
+  public static final Transform3d kRobotToCam =
+      new Transform3d(
+          new Translation3d(
+              Units.inchesToMeters(5.0),     // forward
+              Units.inchesToMeters(4.5),     // left
+              Units.inchesToMeters(27.0)     // up
+          ),
+          new Rotation3d(
+              0,                             // roll
+              Units.degreesToRadians(-5),    // pitch downward (adjust as needed)
+              0                              // yaw
+          )
+      );
 
         // The layout of the AprilTags on the field
         public static final AprilTagFieldLayout kTagLayout =
