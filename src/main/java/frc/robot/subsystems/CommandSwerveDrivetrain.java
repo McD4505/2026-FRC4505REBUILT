@@ -5,10 +5,13 @@ import static edu.wpi.first.units.Units.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.Vector;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.mechanisms.swerve.LegacySwerveModule.DriveRequestType;
+import com.ctre.phoenix6.mechanisms.swerve.LegacySwerveRequest.FieldCentricFacingAngle;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
@@ -18,6 +21,7 @@ import com.ctre.phoenix6.swerve.utility.WheelForceCalculator.Feedforwards;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -36,10 +40,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-
-
-import frc.robot.generated.PRTunerConstants.TunerSwerveDrivetrain;
-// import frc.robot.generated.ORTunerConstants.TunerSwerveDrivetrain;
+import frc.robot.constants.PRTunerConstants.TunerSwerveDrivetrain;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
@@ -50,6 +51,8 @@ import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.path.Waypoint;
 import com.pathplanner.lib.util.PathPlannerLogging;
+
+import static frc.robot.constants.SubsystemConstants.DrivetrainConstants.*;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -360,6 +363,43 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      */
     public Command sysIdDynamic(SysIdRoutine.Direction direction) {
         return m_sysIdRoutineToApply.dynamic(direction);
+    }
+
+  public Command pointTowardsPoint(
+        Translation2d target,
+        DoubleSupplier joystickX,
+        DoubleSupplier joystickY
+    ) {
+
+        PIDController rotationPID = new PIDController(6, 0, 0.2);
+        rotationPID.enableContinuousInput(-Math.PI, Math.PI);
+
+        return run(() -> {
+
+            Pose2d pose = getState().Pose;
+
+            double dx = target.getX() - pose.getX();
+            double dy = target.getY() - pose.getY();
+
+            double targetAngle = Math.atan2(dy, dx);
+
+            double currentAngle = pose.getRotation().getRadians();
+
+            double omega = rotationPID.calculate(currentAngle, targetAngle);
+
+            double xSpeed = joystickX.getAsDouble();
+            double ySpeed = joystickY.getAsDouble();
+
+                    ChassisSpeeds speeds =
+            ChassisSpeeds.fromFieldRelativeSpeeds(
+                xSpeed,
+                ySpeed,
+                omega,
+                pose.getRotation());
+
+            driveRobotRelative(speeds);
+
+        });
     }
 
     @Override

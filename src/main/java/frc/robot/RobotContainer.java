@@ -11,6 +11,7 @@ import java.util.Set;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -24,10 +25,8 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-
-import frc.robot.generated.PRTunerConstants;
-// import frc.robot.generated.ORTunerConstants;
-
+import frc.robot.commands.ShooterCommands;
+import frc.robot.constants.PRTunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.TalonFXSubsystem;
@@ -70,6 +69,18 @@ public class RobotContainer {
     public RobotContainer() {
         autoChooser = AutoBuilder.buildAutoChooser();
         SmartDashboard.putData("Auto Chooser", autoChooser);
+
+        NamedCommands.registerCommand( //intake named command for pathplanning auto
+            "intake",
+             new InstantCommand(() ->
+              feeder.setIntakeSpeedCommand(5))
+            );
+        NamedCommands.registerCommand( //shooting named command which runs the belt while running the turret
+            "shoot",
+            new InstantCommand(() ->
+             turret.setTurretSpeedCommand(50.0, 50.0)
+             .alongWith(belt.setIntakeSpeedCommand(100)))
+            );
         configureBindings();
     }
 
@@ -83,8 +94,12 @@ public class RobotContainer {
         joystick.b().onTrue(feeder.setIntakeSpeedCommand(-75.0));
         joystick.b().onFalse(feeder.setIntakeSpeedCommand(0.0));
 
-        joystick.a().onTrue(belt.setIntakeSpeedCommand(100.0));
-        joystick.a().onFalse(belt.setIntakeSpeedCommand(0.0));
+        // joystick.a().onTrue(belt.setIntakeSpeedCommand(100.0));
+        // joystick.a().onFalse(belt.setIntakeSpeedCommand(0.0));
+         joystick.a().whileTrue(
+        ShooterCommands.teleHalfShooterCommand(turret, feeder,
+            drivetrain, joystick::getLeftX,
+            joystick::getLeftY)); 
 
         // joystick.b().onTrue(conveyor.setBeltSpeedCommand(80.0, 20.0));
         // joystick.b().onFalse(conveyor.setBeltSpeedCommand(0.0));

@@ -24,8 +24,6 @@
 
 package frc.robot.subsystems;
 
-import static frc.robot.Constants.Vision.*;
-
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -36,6 +34,8 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
+
+import static frc.robot.constants.VisionConstants.Vision.*;
 
 import java.util.List;
 import java.util.Optional;
