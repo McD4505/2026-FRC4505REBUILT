@@ -29,6 +29,7 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -39,19 +40,19 @@ import edu.wpi.first.math.util.Units;
 
 public class VisionConstants {
     public static class Vision {
-        public static final String kCameraName = "color";
+        public static final String kCameraName = "AprilTagCamera1";
         // Cam mounted facing forward, half a meter forward of center, half a meter up from center.
   public static final Transform3d kRobotToCam =
       new Transform3d(
           new Translation3d(
-              Units.inchesToMeters(5.0),     // forward
-              Units.inchesToMeters(4.5),     // left
-              Units.inchesToMeters(27.0)     // up
+              Units.inchesToMeters(-8.75),     // forward
+              Units.inchesToMeters(-11.5),     // left
+              Units.inchesToMeters(20.5)     // up
           ),
           new Rotation3d(
               0,                             // roll
-              Units.degreesToRadians(-5),    // pitch downward (adjust as needed)
-              0                              // yaw
+              0,  // pitch downward (adjust as needed)
+              Units.degreesToRadians(180)                           // yaw
           )
       );
 

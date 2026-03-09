@@ -105,6 +105,17 @@ public class TurretSubsystem extends SubsystemBase {
   public Command setTurretSpeedCommand(double topTurretRotationsPerSecond, double bottomTurretRotationsPerSecond){
     return new InstantCommand(() -> setTurretSpeed(topTurretRotationsPerSecond, bottomTurretRotationsPerSecond)); 
   }
+  public double getRPS(TalonFX motor) {
+      return motor.getVelocity().getValueAsDouble();
+  }
+  public boolean atRPS(double rpm) {
+    double currTopRPM = getRPS(topTurretMotor);
+    double currBottomRPM = getRPS(bottomTurretMotor);
+    if (currTopRPM >= rpm && currBottomRPM >= rpm){
+      return true;
+    }
+    return false;
+  }
 
   public void score(){
     // Will need robot relative field velocity
@@ -133,6 +144,7 @@ public class TurretSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
+      SmartDashboard.putNumber("Shooter RPS", getRPS(topTurretMotor));
 }
 
   @Override

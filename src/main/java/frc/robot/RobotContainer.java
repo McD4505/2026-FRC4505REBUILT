@@ -26,16 +26,23 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.ShooterCommands;
+
 import frc.robot.constants.PRTunerConstants;
+import frc.robot.constants.ORTunerConstants;
+
+
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.NeoFxSubsystem;
 import frc.robot.subsystems.TalonFXSubsystem;
 import frc.robot.subsystems.ConveyorSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.subsystems.Vision;
 
 public class RobotContainer {
-    private double MaxSpeed = 1.0 * PRTunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+    // private double MaxSpeed = 1.0 * PRTunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+    private double MaxSpeed = 1.0 * ORTunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
     /* Setting up bindings for necessary control of the swerve drive platform */
@@ -49,7 +56,9 @@ public class RobotContainer {
 
     private final CommandXboxController joystick = new CommandXboxController(0);
 
-    public final CommandSwerveDrivetrain drivetrain = PRTunerConstants.createDrivetrain();
+    // public final CommandSwerveDrivetrain drivetrain = PRTunerConstants.createDrivetrain();
+    public final CommandSwerveDrivetrain drivetrain = ORTunerConstants.createDrivetrain();
+
 
     
     private final SendableChooser<Command> autoChooser;
@@ -60,7 +69,9 @@ public class RobotContainer {
     // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
 
     private final IntakeSubsystem belt = new IntakeSubsystem(52);
-    private final IntakeSubsystem feeder = new IntakeSubsystem(55);
+    private final IntakeSubsystem feeder = new IntakeSubsystem(0);
+    private final NeoFxSubsystem bottom_intake = new NeoFxSubsystem(15);
+    private final NeoFxSubsystem extender = new NeoFxSubsystem(4);
 
     // private final IntakeSubsystem intake = new IntakeSubsystem(51); // Change IDs in code
     // private final ConveyorSubsystem conveyor = new ConveyorSubsystem(52, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
@@ -88,18 +99,22 @@ public class RobotContainer {
         // joystick.x().onTrue(talon.setTalonFXSpeedCommand(8));
         // joystick.x().onFalse(talon.setTalonFXSpeedCommand(0));
 
-        joystick.y().onTrue(turret.setTurretSpeedCommand(50.0, 50.0));
+        joystick.y().whileTrue(bottom_intake.setNeoFXVelocityCommand(-200));
+        // joystick.x().whileTrue(extender.setNeoFXVelocityCommand(4));
+        // joystick.leftBumper().whileTrue(extender.setNeoFXVelocityCommand(-4));
+
+
+        joystick.y().onTrue(turret.setTurretSpeedCommand(60.0, 60.0));
         joystick.y().onFalse(turret.setTurretSpeedCommand(0.0));
 
-        joystick.b().onTrue(feeder.setIntakeSpeedCommand(-75.0));
+        joystick.b().onTrue(feeder.setIntakeSpeedCommand(100.0));
         joystick.b().onFalse(feeder.setIntakeSpeedCommand(0.0));
 
-        // joystick.a().onTrue(belt.setIntakeSpeedCommand(100.0));
-        // joystick.a().onFalse(belt.setIntakeSpeedCommand(0.0));
-         joystick.a().whileTrue(
-        ShooterCommands.teleHalfShooterCommand(turret, feeder,
-            drivetrain, joystick::getLeftX,
-            joystick::getLeftY)); 
+        joystick.a().onTrue(belt.setIntakeSpeedCommand(100.0));
+        joystick.a().onFalse(belt.setIntakeSpeedCommand(0.0));
+
+
+        joystick.x().whileTrue(ShooterCommands.teleHalfShooterCommand(turret, bottom_intake, belt, drivetrain, joystick::getLeftX, joystick::getLeftY));
 
         // joystick.b().onTrue(conveyor.setBeltSpeedCommand(80.0, 20.0));
         // joystick.b().onFalse(conveyor.setBeltSpeedCommand(0.0));

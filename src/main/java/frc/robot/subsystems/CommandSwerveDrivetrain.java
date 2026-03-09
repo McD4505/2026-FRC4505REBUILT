@@ -40,7 +40,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.constants.PRTunerConstants.TunerSwerveDrivetrain;
+
+// import frc.robot.constants.PRTunerConstants.TunerSwerveDrivetrain;
+import frc.robot.constants.ORTunerConstants.TunerSwerveDrivetrain;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
@@ -94,6 +96,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private Pose2d targetPose = new Pose2d();
     PathConstraints constraints = new PathConstraints(4.5, 3.0, Units.degreesToRadians(360), Units.degreesToRadians(180));
 
+    private final SwerveRequest.FieldCentricFacingAngle aimRequest =
+    new SwerveRequest.FieldCentricFacingAngle().withDriveRequestType(com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType.OpenLoopVoltage);
+
     public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
 
     public void setTargetPose(Pose2d newPose) {
@@ -108,6 +113,19 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public Pose2d getTargetPose() {
         return targetPose;
+    }
+    public double getAngleToPoint(Translation2d target) {
+        Pose2d pose = getState().Pose;
+
+        double dx = target.getX() - pose.getX();
+        double dy = target.getY() - pose.getY();
+
+        Rotation2d targetAngle = new Rotation2d(Math.atan2(dy, dx));
+
+        return targetAngle.minus(pose.getRotation()).getDegrees();
+    }
+    public boolean isAimedAt(Translation2d target) {
+        return Math.abs(getAngleToPoint(target)) < 2.0; // 2° tolerance
     }
 
     /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
@@ -188,6 +206,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, modules);
+
+        aimRequest.HeadingController.setPID(6, 0, 0.2);
+        aimRequest.HeadingController.enableContinuousInput(-Math.PI, Math.PI);
 
         if (Utils.isSimulation()) {
             startSimThread();
@@ -365,40 +386,28 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
-  public Command pointTowardsPoint(
+    public Command pointTowardsPoint(
         Translation2d target,
         DoubleSupplier joystickX,
         DoubleSupplier joystickY
     ) {
-
-        PIDController rotationPID = new PIDController(6, 0, 0.2);
-        rotationPID.enableContinuousInput(-Math.PI, Math.PI);
-
-        return run(() -> {
-
+        // This command will run continuously while held
+        return applyRequest(() -> {
             Pose2d pose = getState().Pose;
 
             double dx = target.getX() - pose.getX();
             double dy = target.getY() - pose.getY();
 
-            double targetAngle = Math.atan2(dy, dx);
+            Rotation2d targetAngle = new Rotation2d(Math.atan2(dy, dx));
 
-            double currentAngle = pose.getRotation().getRadians();
+            // **Always read joystick values here**
+            double xSpeed = -joystickY.getAsDouble() * MAX_DRIVE_SPEED;
+            double ySpeed = -joystickX.getAsDouble() * MAX_DRIVE_SPEED;
 
-            double omega = rotationPID.calculate(currentAngle, targetAngle);
-
-            double xSpeed = joystickX.getAsDouble();
-            double ySpeed = joystickY.getAsDouble();
-
-                    ChassisSpeeds speeds =
-            ChassisSpeeds.fromFieldRelativeSpeeds(
-                xSpeed,
-                ySpeed,
-                omega,
-                pose.getRotation());
-
-            driveRobotRelative(speeds);
-
+            return aimRequest
+            .withVelocityX(xSpeed)
+            .withVelocityY(ySpeed)
+            .withTargetDirection(targetAngle);
         });
     }
 

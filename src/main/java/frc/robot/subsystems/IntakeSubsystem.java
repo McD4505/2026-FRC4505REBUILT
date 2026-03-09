@@ -6,6 +6,8 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.*;
 
+import com.revrobotics.spark.SparkMax;
+
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.hardware.*;
@@ -15,6 +17,7 @@ import com.ctre.phoenix6.controls.VelocityVoltage;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -29,6 +32,8 @@ public class IntakeSubsystem extends SubsystemBase {
   public IntakeSubsystem(int intakeID) {
     canBus = new CANBus("rio");
     intakeMotor = new TalonFX(intakeID, canBus);
+
+
     intakeVV = new VelocityVoltage(0).withSlot(0);
     intakeDC = new DutyCycleOut(0);
 
@@ -58,10 +63,13 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeMotor.setControl(intakeVV.withVelocity(RotationsPerSecond));
   }
 
-  public Command setIntakeSpeedCommand(double RotationsPerSecond){
-    return new InstantCommand(() -> setIntakeSpeed(RotationsPerSecond)); 
+  public Command setIntakeSpeedCommand(double speed) {
+      return Commands.startEnd(
+          () -> setIntakeSpeed(speed),
+          () -> setIntakeSpeed(0),
+          this
+      );
   }
-
   @Override
   public void periodic() {
 }
