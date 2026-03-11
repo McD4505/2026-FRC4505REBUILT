@@ -65,6 +65,8 @@ public class NeoFxSubsystem extends SubsystemBase {
             ClosedLoopSlot.kSlot0
         );
     }
+
+
     
     public void setNeoFXVelocity(double velocity) {
         neoFXClosedLoopController.setSetpoint(

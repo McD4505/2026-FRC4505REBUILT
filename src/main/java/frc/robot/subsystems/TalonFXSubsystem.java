@@ -7,6 +7,7 @@ package frc.robot.subsystems;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -26,6 +27,7 @@ public class TalonFXSubsystem extends SubsystemBase {
   private final DutyCycleOut dc;
   private final TalonFXConfiguration talonFXConfig;
 
+  private boolean talonFXOverTemp;
 
   public TalonFXSubsystem(int talonFXID) {
     canBus = new CANBus("rio");
@@ -57,16 +59,21 @@ public class TalonFXSubsystem extends SubsystemBase {
     SmartDashboard.setDefaultNumber("TalonFX Actual RPS", 0);
     SmartDashboard.setDefaultNumber("TalonFX Target RPS", 0);
     SmartDashboard.setDefaultBoolean("Stop TalonFX", false);
+
+    SmartDashboard.setDefaultNumber(this.getName() + " TalonFX Temperature", 0);
   }
 
   public void setTalonFXSpeed(double RotationsPerSecond){
-    talonFX.setControl(vv.withVelocity(RotationsPerSecond));
+    if (RotationsPerSecond == 0){
+      talonFX.setControl(new NeutralOut());
+    } else {
+      talonFX.setControl(vv.withVelocity(RotationsPerSecond));
+    }
   }
 
   public Command setTalonFXSpeedCommand(double RotationsPerSecond){
     return new InstantCommand(() -> setTalonFXSpeed(RotationsPerSecond)); 
   }
-
 
   @Override
   public void periodic() {
@@ -77,6 +84,16 @@ public class TalonFXSubsystem extends SubsystemBase {
     }
     double targetRPS = SmartDashboard.getNumber("TalonFX Target RPS", 0);
     setTalonFXSpeed(targetRPS);
+
+    SmartDashboard.putNumber(this.getName() + " TalonFX Temperature", talonFX.getDeviceTemp().getValueAsDouble());
+
+    double talonFXTemp = talonFX.getDeviceTemp().getValueAsDouble();
+    if (talonFXTemp > 75) talonFXOverTemp = true;
+    if (talonFXTemp < 65) talonFXOverTemp = false;
+
+    if (talonFXOverTemp){
+      talonFX.setControl(new NeutralOut());
+    }
 }
 
   @Override

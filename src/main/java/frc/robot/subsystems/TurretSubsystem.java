@@ -13,6 +13,7 @@ import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.hardware.*;
 import com.ctre.phoenix6.signals.*;
 import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 
 import edu.wpi.first.math.geometry.Pose3d;
@@ -36,6 +37,9 @@ public class TurretSubsystem extends SubsystemBase {
   private final TalonFXConfiguration topTurretConfig;
   private final TalonFXConfiguration bottomTurretConfig;
 
+  private boolean topTurretOverTemp;
+  private boolean bottomTurretOverTemp;
+
   public TurretSubsystem(int topTurretID, int bottomTurretID) {
     canBus = new CANBus("rio");
     topTurretMotor = new TalonFX(topTurretID, canBus);
@@ -58,7 +62,7 @@ public class TurretSubsystem extends SubsystemBase {
 
     // enable supply and stator current limit
     topTurretConfig.CurrentLimits.SupplyCurrentLimit = 50;
-    topTurretConfig.CurrentLimits.StatorCurrentLimit = 100;
+    topTurretConfig.CurrentLimits.StatorCurrentLimit = 80;
     topTurretConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
     topTurretConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 
@@ -79,23 +83,43 @@ public class TurretSubsystem extends SubsystemBase {
 
     // enable supply and stator current limit
     bottomTurretConfig.CurrentLimits.SupplyCurrentLimit = 50;
-    bottomTurretConfig.CurrentLimits.StatorCurrentLimit = 100;
+    bottomTurretConfig.CurrentLimits.StatorCurrentLimit = 80;
     bottomTurretConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
     bottomTurretConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 
     bottomTurretMotor.getConfigurator().apply(bottomTurretConfig);
 
     bottomTurretMotor.setPosition(0);
+
+    SmartDashboard.setDefaultNumber(this.getName() + " Top Turret Target RPS", 0);
+    SmartDashboard.setDefaultNumber(this.getName() + " Bottom Turret Target RPS", 0);
+    SmartDashboard.setDefaultBoolean(this.getName() + " Control Mode", false);
+    
+    SmartDashboard.setDefaultNumber(this.getName() + " Top Turret Temperature", 0);
+    SmartDashboard.setDefaultNumber(this.getName() + " Bottom Turret Temperature", 0);
   }
 
   public void setTurretSpeed(double RotationsPerSecond){
-    topTurretMotor.setControl(topTurretVV.withVelocity(RotationsPerSecond)); // Change Spin Directions in Phoenix Tuner X
-    bottomTurretMotor.setControl(bottomTurretVV.withVelocity(RotationsPerSecond));
+    if (RotationsPerSecond == 0){
+      topTurretMotor.setControl(new NeutralOut());
+      bottomTurretMotor.setControl(new NeutralOut());
+    } else {
+      topTurretMotor.setControl(topTurretVV.withVelocity(RotationsPerSecond)); // Change Spin Directions in Phoenix Tuner X
+      bottomTurretMotor.setControl(bottomTurretVV.withVelocity(RotationsPerSecond));
+    }
   }
 
   public void setTurretSpeed(double topTurretRotationsPerSecond, double bottomTurretRotationsPerSecond){
-    topTurretMotor.setControl(topTurretVV.withVelocity(topTurretRotationsPerSecond)); // Change Spin Directions in Phoenix Tuner X
-    bottomTurretMotor.setControl(bottomTurretVV.withVelocity(bottomTurretRotationsPerSecond));
+    if (topTurretRotationsPerSecond == 0){
+      topTurretMotor.setControl(new NeutralOut());
+    } else {
+      topTurretMotor.setControl(topTurretVV.withVelocity(topTurretRotationsPerSecond)); // Change Spin Directions in Phoenix Tuner X
+    }
+    if (bottomTurretRotationsPerSecond == 0){
+      bottomTurretMotor.setControl(new NeutralOut());
+    } else {
+      bottomTurretMotor.setControl(bottomTurretVV.withVelocity(bottomTurretRotationsPerSecond));
+    } 
   }
 
   public Command setTurretSpeedCommand(double RotationsPerSecond){
@@ -144,8 +168,48 @@ public class TurretSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-      SmartDashboard.putNumber("Shooter RPS", getRPS(topTurretMotor));
-}
+      SmartDashboard.putNumber("Top Turret Stator Current",
+        topTurretMotor.getStatorCurrent().getValueAsDouble());
+
+      SmartDashboard.putNumber("Top Turret Supply Current",
+        topTurretMotor.getSupplyCurrent().getValueAsDouble());
+
+      SmartDashboard.putNumber("Bottom Turret Stator Current",
+          bottomTurretMotor.getStatorCurrent().getValueAsDouble());
+
+      SmartDashboard.putNumber("Bottom Turret Supply Current",
+          bottomTurretMotor.getSupplyCurrent().getValueAsDouble());
+
+      SmartDashboard.putNumber(this.getName() + " Top Turret Actual RPS", getRPS(topTurretMotor));
+      SmartDashboard.putNumber(this.getName() + " Bottom Turret Actual RPS", getRPS(bottomTurretMotor));
+      if (SmartDashboard.getBoolean(this.getName() + " Control Mode", false)){
+        setTurretSpeed(SmartDashboard.getNumber(this.getName() + " Top Turret Target RPS", 0), SmartDashboard.getNumber(this.getName() + " Bottom Turret Target RPS", 0));
+      }
+
+      SmartDashboard.putNumber(this.getName() + " Top Turret Temperature", topTurretMotor.getDeviceTemp().getValueAsDouble());
+      SmartDashboard.putNumber(this.getName() + " Bottom Turret Temperature", bottomTurretMotor.getDeviceTemp().getValueAsDouble());
+
+      double topTurretTemp = topTurretMotor.getDeviceTemp().getValueAsDouble();
+      if (topTurretTemp > 75) topTurretOverTemp = true;
+      if (topTurretTemp < 65) topTurretOverTemp = false;
+
+      // if (topTurretOverTemp){
+      //   topTurretMotor.setControl(new NeutralOut());
+      // }
+
+      double bottomTurretTemp = bottomTurretMotor.getDeviceTemp().getValueAsDouble();
+      if (bottomTurretTemp > 75) bottomTurretOverTemp = true;
+      if (bottomTurretTemp < 65) bottomTurretOverTemp = false;
+
+      // if (bottomTurretOverTemp){
+      //   bottomTurretMotor.setControl(new NeutralOut());
+      // }
+
+      if (topTurretOverTemp || bottomTurretOverTemp){
+        topTurretMotor.setControl(new NeutralOut());
+        bottomTurretMotor.setControl(new NeutralOut());
+      }
+  }
 
   @Override
   public void simulationPeriodic() {

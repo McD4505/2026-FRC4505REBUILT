@@ -35,6 +35,7 @@ public class ShooterCommands {
             setDesiredShootingStates(top_shooter, feeder, drive)
         );
     }
+
     public static Command setDesiredShootingStates(
         TurretSubsystem shooter,
         NeoFxSubsystem feeder,

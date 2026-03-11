@@ -11,6 +11,7 @@ import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.hardware.*;
 import com.ctre.phoenix6.signals.*;
 import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -30,6 +31,8 @@ public class ConveyorSubsystem extends SubsystemBase {
   private final TalonFXConfiguration beltConfig;
   private final TalonFXConfiguration turretFeedConfig;
 
+  private boolean beltOverTemp;
+  private boolean turretFeedOverTemp;
 
   public ConveyorSubsystem(int beltID, int turretFeedID) {
     canBus = new CANBus("rio");
@@ -81,28 +84,62 @@ public class ConveyorSubsystem extends SubsystemBase {
     turretFeedMotor.getConfigurator().apply(turretFeedConfig);
 
     turretFeedMotor.setPosition(0);
+
+    SmartDashboard.setDefaultNumber(this.getName() + " Belt Temperature", 0);
+    SmartDashboard.setDefaultNumber(this.getName() + " Turret Feed Temperature", 0);
   }
 
   public void setBeltSpeed(double RotationsPerSecond){
-    beltMotor.setControl(beltVV.withVelocity(RotationsPerSecond));
-    turretFeedMotor.setControl(turretFeedVV.withVelocity(RotationsPerSecond));
+    if (RotationsPerSecond == 0){
+      beltMotor.setControl(new NeutralOut());
+      turretFeedMotor.setControl(new NeutralOut());
+    } else {
+      beltMotor.setControl(beltVV.withVelocity(RotationsPerSecond));
+      turretFeedMotor.setControl(turretFeedVV.withVelocity(RotationsPerSecond));
+    }
   }
 
   public void setBeltSpeed(double beltRotationsPerSecond, double turretFeedRotationsPerSecond){
-    beltMotor.setControl(beltVV.withVelocity(beltRotationsPerSecond));
-    turretFeedMotor.setControl(turretFeedVV.withVelocity(turretFeedRotationsPerSecond));
+    if (beltRotationsPerSecond == 0){
+      beltMotor.setControl(new NeutralOut());
+    } else {
+      beltMotor.setControl(beltVV.withVelocity(beltRotationsPerSecond));
+    }
+    if (turretFeedRotationsPerSecond == 0){
+      turretFeedMotor.setControl(new NeutralOut());
+    } else {
+      turretFeedMotor.setControl(turretFeedVV.withVelocity(turretFeedRotationsPerSecond));
+    }
   }
 
   public Command setBeltSpeedCommand(double RotationsPerSecond){
-    return new InstantCommand(() -> setBeltSpeed(RotationsPerSecond)); 
+    return new InstantCommand(() -> setBeltSpeed(RotationsPerSecond), this); 
   }
 
   public Command setBeltSpeedCommand(double beltRotationsPerSecond, double turretFeedRotationsPerSecond){
-    return new InstantCommand(() -> setBeltSpeed(beltRotationsPerSecond, turretFeedRotationsPerSecond)); 
+    return new InstantCommand(() -> setBeltSpeed(beltRotationsPerSecond, turretFeedRotationsPerSecond), this); 
   }
 
   @Override
   public void periodic() {
+    SmartDashboard.putNumber(this.getName() + " Belt Temperature", beltMotor.getDeviceTemp().getValueAsDouble());
+    SmartDashboard.putNumber(this.getName() + " Turret Feed Temperature", turretFeedMotor.getDeviceTemp().getValueAsDouble());
+
+    double beltTemp = beltMotor.getDeviceTemp().getValueAsDouble();
+    if (beltTemp > 75) beltOverTemp = true;
+    if (beltTemp < 65) beltOverTemp = false;
+    
+    if (beltOverTemp){
+      beltMotor.setControl(new NeutralOut());
+    }
+
+    double turretFeedTemp = turretFeedMotor.getDeviceTemp().getValueAsDouble();
+    if (turretFeedTemp > 75) turretFeedOverTemp = true;
+    if (turretFeedTemp < 65) turretFeedOverTemp = false;
+
+    if (turretFeedOverTemp){
+      turretFeedMotor.setControl(new NeutralOut());
+    }
   }
 
   @Override

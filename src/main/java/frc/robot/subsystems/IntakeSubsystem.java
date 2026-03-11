@@ -13,6 +13,7 @@ import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.hardware.*;
 import com.ctre.phoenix6.signals.*;
 import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -28,6 +29,8 @@ public class IntakeSubsystem extends SubsystemBase {
   private final VelocityVoltage intakeVV;
   private final DutyCycleOut intakeDC;
   private final TalonFXConfiguration intakeConfig;
+
+  private boolean intakeOverTemp;
 
   public IntakeSubsystem(int intakeID) {
     canBus = new CANBus("rio");
@@ -57,10 +60,16 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeMotor.getConfigurator().apply(intakeConfig);
 
     intakeMotor.setPosition(0);
+
+    SmartDashboard.setDefaultNumber(this.getName() + " Intake Temperature", 0);
   }
 
   public void setIntakeSpeed(double RotationsPerSecond){
-    intakeMotor.setControl(intakeVV.withVelocity(RotationsPerSecond));
+    if (RotationsPerSecond == 0){
+      intakeMotor.setControl(new NeutralOut());
+    } else {
+      intakeMotor.setControl(intakeVV.withVelocity(RotationsPerSecond));
+    }
   }
 
   public Command setIntakeSpeedCommand(double speed) {
@@ -72,6 +81,15 @@ public class IntakeSubsystem extends SubsystemBase {
   }
   @Override
   public void periodic() {
+    SmartDashboard.putNumber(this.getName() + " Intake Temperature", intakeMotor.getDeviceTemp().getValueAsDouble());
+
+    double intakeTemp = intakeMotor.getDeviceTemp().getValueAsDouble();
+    if (intakeTemp > 75) intakeOverTemp = true;
+    if (intakeTemp < 65) intakeOverTemp = false;
+
+    if (intakeOverTemp){
+      intakeMotor.setControl(new NeutralOut());
+    }
 }
 
   @Override
