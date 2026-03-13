@@ -17,7 +17,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-public class NeoFxSubsystem extends SubsystemBase {
+public class ExtenderSubsystem extends SubsystemBase {
 
     private final SparkMax neoFXMotor;
     private final SparkMaxConfig neoFXConfig;
@@ -26,7 +26,7 @@ public class NeoFxSubsystem extends SubsystemBase {
 
     private final double gearRatio = 3.00; //Don't forget to change Elastic to New Max and Min Speeds (5767.0 / gearRatio)
 
-    public NeoFxSubsystem(int neoFXID) {
+    public ExtenderSubsystem(int neoFXID) {
         neoFXMotor = new SparkMax(neoFXID, MotorType.kBrushless);
         neoFXClosedLoopController = neoFXMotor.getClosedLoopController();
         neoFXRelativeEncoder = neoFXMotor.getEncoder();

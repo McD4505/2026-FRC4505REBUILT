@@ -38,6 +38,7 @@ import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.NeoFxSubsystem;
 import frc.robot.subsystems.TalonFXSubsystem;
 import frc.robot.subsystems.ConveyorSubsystem;
+import frc.robot.subsystems.ExtenderSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.subsystems.Vision;
 
@@ -72,7 +73,7 @@ public class RobotContainer {
 
     private final IntakeSubsystem intake = new IntakeSubsystem(52);
     private final NeoFxSubsystem indexer = new NeoFxSubsystem(15);
-    private final NeoFxSubsystem extender = new NeoFxSubsystem(4);
+    private final ExtenderSubsystem extender = new ExtenderSubsystem(4);
 
     // private final IntakeSubsystem intake = new IntakeSubsystem(51); // Change IDs in code
     // private final ConveyorSubsystem conveyor = new ConveyorSubsystem(52, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
@@ -82,15 +83,14 @@ public class RobotContainer {
         autoChooser = AutoBuilder.buildAutoChooser();
         SmartDashboard.putData("Auto Chooser", autoChooser);
 
-        NamedCommands.registerCommand( //intake named command for pathplanning auto
-            "intake",
-             new InstantCommand(() ->
-              intake.setIntakeSpeedCommand(5))
-            );
-        NamedCommands.registerCommand( //shooting named command which runs the belt while running the turret
-            "shoot",
-            ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY)
-            );
+        // NamedCommands.registerCommand(
+        //     "intake",
+        //     intake.setIntakeSpeedCommand(5)
+        // );
+        // NamedCommands.registerCommand( //shooting named command which runs the belt while running the turret
+        //     "shoot",
+        //     ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY)
+        //     );
         configureBindings();
     }
 

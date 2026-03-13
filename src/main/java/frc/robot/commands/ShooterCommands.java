@@ -62,13 +62,14 @@ public class ShooterCommands {
 
                 shooter.setTurretSpeed(targetRPS);
 
-                boolean spinReady = shooter.atRPS(targetRPS);
+                boolean spinReady = shooter.atRPS(targetRPS-10);
                 SmartDashboard.putBoolean("spinready", spinReady);
+                SmartDashboard.putNumber("targetRPSVariable" , targetRPS);
                 // boolean aimed = drive.isAimedAt(HUB_LOCATION.getTranslation());
                 if (spinReady) {
-                    indexer.setNeoFXVelocityCommand(INDEXER_SHOOT_RPS);
+                    indexer.setNeoFXVelocity(INDEXER_SHOOT_RPS);
                 } else {
-                    indexer.setNeoFXVelocityCommand(0);
+                    indexer.setNeoFXVelocity(0);
                 }
             },
             () -> {
