@@ -40,21 +40,39 @@ import edu.wpi.first.math.util.Units;
 
 public class VisionConstants {
     public static class Vision {
-        public static final String kCameraName = "AprilTagCamera1";
+        public static final String kCameraName = "AprilTagCamera1"; //left camera
         // Cam mounted facing forward, half a meter forward of center, half a meter up from center.
-  public static final Transform3d kRobotToCam =
-      new Transform3d(
-          new Translation3d(
-              Units.inchesToMeters(-8.75),     // forward
-              Units.inchesToMeters(-11.5),     // left
-              Units.inchesToMeters(20.5)     // up
-          ),
-          new Rotation3d(
-              0,                             // roll
-              0,  // pitch downward (adjust as needed)
-              Units.degreesToRadians(180)                           // yaw
-          )
-      );
+        public static final Transform3d kRobotToCam =
+            new Transform3d(
+                new Translation3d(
+                    Units.inchesToMeters(-8.75),     // forward
+                    Units.inchesToMeters(-10.5),     // left
+                    Units.inchesToMeters(20.5)     // up
+                ),
+                new Rotation3d(
+                    0,                             // roll
+                    0,  // pitch downward (adjust as needed)
+                    Units.degreesToRadians(195)                           // yaw
+                )
+            );
+
+        public static final String kCameraName2 = "AprilTagCamera2"; //right camera
+        public static final Transform3d kRobotToCam2 = 
+            new Transform3d(
+                new Translation3d(
+                    Units.inchesToMeters(-8.75),
+                    Units.inchesToMeters(5),
+                    Units.inchesToMeters(20.5)
+                ),
+                new Rotation3d(
+                    0,
+                    0,
+                    Units.degreesToRadians(165)
+                )
+            );
+
+
+
 
         // The layout of the AprilTags on the field
         public static final AprilTagFieldLayout kTagLayout =

@@ -53,10 +53,17 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 public class Vision extends SubsystemBase{
     private final PhotonCamera camera;
     private final PhotonPoseEstimator photonEstimator;
+
+    private final PhotonCamera camera2;
+    private final PhotonPoseEstimator photonEstimator2;
+
     private Matrix<N3, N1> curStdDevs;
 
     private final EstimateConsumer estConsumer;
     private final Supplier<Pose2d> poseSupplier;
+
+    private PhotonCamera[] cameras;
+    private PhotonPoseEstimator[] estimators;
 
     private List<PhotonPipelineResult> latestResult;
 
@@ -76,6 +83,11 @@ public class Vision extends SubsystemBase{
         camera = new PhotonCamera(kCameraName);
         photonEstimator = new PhotonPoseEstimator(kTagLayout, kRobotToCam);
 
+        this.camera2 = new PhotonCamera(kCameraName2);
+        this.photonEstimator2 = new PhotonPoseEstimator(kTagLayout, kRobotToCam2);
+        cameras = new PhotonCamera[] {camera, camera2};
+        estimators = new PhotonPoseEstimator[] {photonEstimator, photonEstimator2};
+
         SmartDashboard.putData("Vision Field", visionField);
 
         // ----- Simulation
@@ -84,55 +96,63 @@ public class Vision extends SubsystemBase{
             visionSim = new VisionSystemSim("main");
             // Add all the AprilTags inside the tag layout as visible targets to this simulated field.
             visionSim.addAprilTags(kTagLayout);
-            // Create simulated camera properties. These can be set to mimic your actual camera.
-            var cameraProp = new SimCameraProperties();
-            cameraProp.setCalibration(640, 480, Rotation2d.fromDegrees(90));
-            cameraProp.setCalibError(0.35, 0.10);
-            cameraProp.setFPS(30);
-            cameraProp.setAvgLatencyMs(50);
-            cameraProp.setLatencyStdDevMs(15);
-            // Create a PhotonCameraSim which will update the linked PhotonCamera's values with visible
-            // targets.
-            cameraSim = new PhotonCameraSim(camera, cameraProp);
-            // Add the simulated camera to view the targets on this simulated field.
-            visionSim.addCamera(cameraSim, kRobotToCam);
-            cameraSim.enableDrawWireframe(true);
+            for (int i = 0; i < cameras.length; i++) {
+                PhotonCamera cam = cameras[i];
+
+                var cameraProp = new SimCameraProperties();
+                cameraProp.setCalibration(640, 480, Rotation2d.fromDegrees(90));
+                // cameraProp.setCalibError(0.35, 0.10);
+                cameraProp.setFPS(30);
+                cameraProp.setAvgLatencyMs(50);
+                cameraProp.setLatencyStdDevMs(15);
+
+                cameraSim = new PhotonCameraSim(cam, cameraProp);
+
+                var transform = (i == 0) ? kRobotToCam : kRobotToCam2;
+                visionSim.addCamera(cameraSim, transform);
+
+                cameraSim.enableDrawWireframe(true);
+            }
         }
     }
 
 
     @Override
     public void periodic() {
-        Optional<EstimatedRobotPose> visionEst = Optional.empty();
-        latestResult = camera.getAllUnreadResults();
-        for (var result : latestResult) {
-            visionEst = photonEstimator.estimateCoprocMultiTagPose(result);
-            if (visionEst.isEmpty()) {
-                visionEst = photonEstimator.estimateLowestAmbiguityPose(result);
-            }
-            updateEstimationStdDevs(visionEst, result.getTargets());
-                        // --- POSE DATA ---
+        for (int i = 0; i < cameras.length; i++) {
+            PhotonCamera cam = cameras[i];
+            PhotonPoseEstimator estimator = estimators[i];
+            Optional<EstimatedRobotPose> visionEst = Optional.empty();
+            latestResult = cam.getAllUnreadResults();
+            for (var result : latestResult) {
+                visionEst = estimator.estimateCoprocMultiTagPose(result);
+                if (visionEst.isEmpty()) {
+                    visionEst = estimator.estimateLowestAmbiguityPose(result);
+                }
+                updateEstimationStdDevs(visionEst, result.getTargets());
+                            // --- POSE DATA ---
 
 
-            if (Robot.isSimulation()) {
-                visionEst.ifPresentOrElse(
-                        est ->
-                                getSimDebugField()
-                                        .getObject("VisionEstimation")
-                                        .setPose(est.estimatedPose.toPose2d()),
-                        () -> {
-                            getSimDebugField().getObject("VisionEstimation").setPoses();
+                if (Robot.isSimulation()) {
+                    visionEst.ifPresentOrElse(
+                            est ->
+                                    getSimDebugField()
+                                            .getObject("VisionEstimation")
+                                            .setPose(est.estimatedPose.toPose2d()),
+                            () -> {
+                                getSimDebugField().getObject("VisionEstimation").setPoses();
+                            });
+                }
+
+                visionEst.ifPresent(
+                        est -> {
+                            // Change our trust in the measurement based on the tags we can see
+                            var estStdDevs = getEstimationStdDevs();
+                            Pose2d pose = est.estimatedPose.toPose2d();
+                            visionField.setRobotPose(pose);
+                            estConsumer.accept(pose, est.timestampSeconds, estStdDevs);
                         });
             }
-
-            visionEst.ifPresent(
-                    est -> {
-                        // Change our trust in the measurement based on the tags we can see
-                        var estStdDevs = getEstimationStdDevs();
-                        Pose2d pose = est.estimatedPose.toPose2d();
-                        visionField.setRobotPose(pose);
-                        estConsumer.accept(pose, est.timestampSeconds, estStdDevs);
-                    });
         }
     }
 public Pose2d getTagPose(int tagId) {

@@ -21,49 +21,84 @@ import java.util.function.DoubleSupplier;
 
 public class ShooterCommands {
     public static Command teleHalfShooterCommand(
-        TurretSubsystem top_shooter,
-        NeoFxSubsystem feeder,
-        IntakeSubsystem hopper,
+        TurretSubsystem shooter,
+        NeoFxSubsystem indexer,
         CommandSwerveDrivetrain drive,
         DoubleSupplier joystickX,
         DoubleSupplier joystickY
     ) {
         return new ParallelCommandGroup(
-            hopper.setIntakeSpeedCommand(50),
             // directly use the command returned by pointTowardsPoint
             drive.pointTowardsPoint(HUB_LOCATION.getTranslation(), joystickX, joystickY),
-            setDesiredShootingStates(top_shooter, feeder, drive)
+            setDesiredShootingStates(shooter, indexer, drive, true)
         );
     }
 
     public static Command setDesiredShootingStates(
         TurretSubsystem shooter,
-        NeoFxSubsystem feeder,
-        CommandSwerveDrivetrain drive) {
+        NeoFxSubsystem indexer,
+        CommandSwerveDrivetrain drive,
+        boolean isShoot
+        ) {
 
-        return Commands.run(() -> {
 
-            double distance = drive.getDistanceToHub(
-                DriverStation.getAlliance().orElse(Alliance.Blue)
-            );
+        return Commands.runEnd(
 
-            double targetRPS = SHOOTER_VELOCITY_LOOKUP.get(distance);
+            () -> {
+                double distance = 0;
+                if (isShoot) {
+                    distance = drive.getDistanceToHub(
+                    DriverStation.getAlliance().orElse(Alliance.Blue)
+                    );
+                } else {
+                    if (DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue) {
+                        distance = Math.abs(drive.getPose().getX() - BUMPER_LINE_BLUE) + PASS_OFFSET;
+                    } else {
+                        distance = Math.abs(drive.getPose().getX() - BUMPER_LINE_RED) + PASS_OFFSET;
+                    }
+                }
 
-            shooter.setTurretSpeed(60);
+                double targetRPS = SHOOTER_VELOCITY_LOOKUP.get(distance);
 
-            boolean spinReady = shooter.atRPS(60);
-            SmartDashboard.putBoolean("spinready", spinReady);
-            // boolean aimed = drive.isAimedAt(HUB_LOCATION.getTranslation());
-            if (spinReady) {
-                feeder.setNeoFXVelocity(-100);
+                shooter.setTurretSpeed(targetRPS);
+
+                boolean spinReady = shooter.atRPS(targetRPS);
+                SmartDashboard.putBoolean("spinready", spinReady);
+                // boolean aimed = drive.isAimedAt(HUB_LOCATION.getTranslation());
+                if (spinReady) {
+                    indexer.setNeoFXVelocityCommand(INDEXER_SHOOT_RPS);
+                } else {
+                    indexer.setNeoFXVelocityCommand(0);
+                }
+            },
+            () -> {
+                shooter.setTurretSpeed(0);
+                indexer.setNeoFXVelocity(0);
+            },
+            shooter,
+            indexer
+        );
+    }
+
+    public static Command passCommand(
+        TurretSubsystem shooter,
+        NeoFxSubsystem indexer,
+        CommandSwerveDrivetrain drive,
+        DoubleSupplier joystickX,
+        DoubleSupplier joystickY
+        ) {
+            Pose2d robotPose = drive.getPose();
+            Rotation2d facing = null;
+            if (DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue) {
+                facing = Rotation2d.fromDegrees(180);
             } else {
-                feeder.setNeoFXVelocity(0);
+                facing = Rotation2d.fromDegrees(0);
             }
+            return new ParallelCommandGroup(
 
-        }, shooter, feeder)
-        .finallyDo(() -> {
-            shooter.setTurretSpeed(0);
-            feeder.setNeoFXVelocity(0);
-        });
+                drive.pointTowardsPoint(new Pose2d(robotPose.getX(), robotPose.getY(), facing).getTranslation(), joystickX, joystickY),
+                setDesiredShootingStates(shooter, indexer, drive, false)
+
+            );
     }
 }

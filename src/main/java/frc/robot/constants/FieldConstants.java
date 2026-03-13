@@ -10,6 +10,9 @@ public class FieldConstants {
     public static final Pose2d HUB_LOCATION = new Pose2d(
                 !isRedSide() ? 4.75 : FIELD_LENGTH_M - 4.75, 4.035, Rotation2d.kZero);
 
+    public static final double BUMPER_LINE_RED = 492.61;
+    public static final double BUMPER_LINE_BLUE = 156.61;
+
     public static boolean isRedSide() {
         if (DriverStation.getAlliance().isPresent()
                         && DriverStation.getAlliance().get() != DriverStation.Alliance.Red) {

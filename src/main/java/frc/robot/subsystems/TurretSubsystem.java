@@ -115,8 +115,8 @@ public class TurretSubsystem extends SubsystemBase {
     } else {
       topTurretMotor.setControl(topTurretVV.withVelocity(topTurretRotationsPerSecond)); // Change Spin Directions in Phoenix Tuner X
     }
-    if (bottomTurretRotationsPerSecond == 0){
-      bottomTurretMotor.setControl(new NeutralOut());
+    if (bottomTurretRotationsPerSecond == 0){ 
+      bottomTurretMotor.setControl(new NeutralOut());      
     } else {
       bottomTurretMotor.setControl(bottomTurretVV.withVelocity(bottomTurretRotationsPerSecond));
     } 

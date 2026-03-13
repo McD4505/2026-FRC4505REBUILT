@@ -5,6 +5,8 @@
 package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
+import static frc.robot.constants.SubsystemConstants.INDEXER_SHOOT_RPS;
+import static frc.robot.constants.SubsystemConstants.INTAKE_SHOOT_RPS;
 
 import java.util.Set;
 
@@ -68,14 +70,13 @@ public class RobotContainer {
     // private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
     // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
 
-    private final IntakeSubsystem belt = new IntakeSubsystem(52);
-    private final IntakeSubsystem feeder = new IntakeSubsystem(0);
-    private final NeoFxSubsystem bottom_intake = new NeoFxSubsystem(15);
+    private final IntakeSubsystem intake = new IntakeSubsystem(52);
+    private final NeoFxSubsystem indexer = new NeoFxSubsystem(15);
     private final NeoFxSubsystem extender = new NeoFxSubsystem(4);
 
     // private final IntakeSubsystem intake = new IntakeSubsystem(51); // Change IDs in code
     // private final ConveyorSubsystem conveyor = new ConveyorSubsystem(52, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
-    private final TurretSubsystem turret = new TurretSubsystem(54, 53); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
+    private final TurretSubsystem turret = new TurretSubsystem(54, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
 
     public RobotContainer() {
         autoChooser = AutoBuilder.buildAutoChooser();
@@ -84,43 +85,32 @@ public class RobotContainer {
         NamedCommands.registerCommand( //intake named command for pathplanning auto
             "intake",
              new InstantCommand(() ->
-              feeder.setIntakeSpeedCommand(5))
+              intake.setIntakeSpeedCommand(5))
             );
         NamedCommands.registerCommand( //shooting named command which runs the belt while running the turret
             "shoot",
-            new InstantCommand(() ->
-             turret.setTurretSpeedCommand(50.0, 50.0)
-             .alongWith(belt.setIntakeSpeedCommand(100)))
+            ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY)
             );
         configureBindings();
     }
 
     private void configureBindings() {
-        // joystick.x().onTrue(talon.setTalonFXSpeedCommand(8));
-        // joystick.x().onFalse(talon.setTalonFXSpeedCommand(0));
-
-        joystick.y().whileTrue(bottom_intake.setNeoFXVelocityCommand(-200));
-        // joystick.x().whileTrue(extender.setNeoFXVelocityCommand(4));
-        // joystick.leftBumper().whileTrue(extender.setNeoFXVelocityCommand(-4));
 
 
-        // joystick.y().onTrue(turret.setTurretSpeedCommand(60.0, 60.0));
-        // joystick.y().onFalse(turret.setTurretSpeedCommand(0.0));
+        joystick.y().onTrue(indexer.setNeoFXVelocityCommand(INDEXER_SHOOT_RPS));
+        joystick.y().onFalse(indexer.setNeoFXVelocityCommand(0));
 
-        joystick.b().onTrue(feeder.setIntakeSpeedCommand(100.0));
-        joystick.b().onFalse(feeder.setIntakeSpeedCommand(0.0));
+        joystick.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff
+        joystick.leftTrigger().onFalse(intake.setIntakeSpeedCommand(0));
 
-        joystick.a().onTrue(belt.setIntakeSpeedCommand(100.0));
-        joystick.a().onFalse(belt.setIntakeSpeedCommand(0.0));
+        joystick.leftBumper().onTrue(intake.setIntakeSpeedCommand(-INTAKE_SHOOT_RPS)); //push stuff out of the intake
+        joystick.leftBumper().onFalse(intake.setIntakeSpeedCommand(0));
 
 
-        joystick.x().whileTrue(ShooterCommands.teleHalfShooterCommand(turret, bottom_intake, belt, drivetrain, joystick::getLeftX, joystick::getLeftY));
 
-        // joystick.b().onTrue(conveyor.setBeltSpeedCommand(80.0, 20.0));
-        // joystick.b().onFalse(conveyor.setBeltSpeedCommand(0.0));
+        joystick.rightBumper().whileTrue(ShooterCommands.passCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY));
+        joystick.rightTrigger().whileTrue(ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY));
 
-        // joystick.a().onTrue(intake.setIntakeSpeedCommand(0.3));
-        // joystick.a().onFalse(intake.setIntakeSpeedCommand(0.0));
 
         // Note that X is defined as forward according to WPILib convention,                                                                                                                                                                                                                                                                                                                ;/
         // and Y is defined as to the left according to WPILib convention.
@@ -133,10 +123,7 @@ public class RobotContainer {
             )
         );
 
-
-        joystick.povUp().onTrue(new InstantCommand(() -> drivetrain.setTargetPose(10)));
-        joystick.povDown().onTrue(drivetrain.pathfind());
-        joystick.povLeft().onTrue(pathFindToAprilTag());
+        // joystick.povLeft().onTrue(pathFindToAprilTag());
 
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
@@ -146,7 +133,9 @@ public class RobotContainer {
         );
 
         // Reset the field-centric heading on left bumper press.
-        joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        joystick.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        joystick.povUp().onTrue(extender.setNeoFXVelocityCommand(20));
+        joystick.povUp().onFalse(extender.setNeoFXVelocityCommand(0));
 
         drivetrain.registerTelemetry(logger::telemeterize);
     }

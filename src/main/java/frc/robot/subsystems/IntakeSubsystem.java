@@ -9,6 +9,7 @@ import static edu.wpi.first.units.Units.*;
 import com.revrobotics.spark.SparkMax;
 
 import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.hardware.*;
 import com.ctre.phoenix6.signals.*;
@@ -16,6 +17,7 @@ import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 
+import edu.wpi.first.units.measure.Temperature;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -29,12 +31,15 @@ public class IntakeSubsystem extends SubsystemBase {
   private final VelocityVoltage intakeVV;
   private final DutyCycleOut intakeDC;
   private final TalonFXConfiguration intakeConfig;
+  private final StatusSignal<Temperature> intakeTempSignal;
 
   private boolean intakeOverTemp;
 
   public IntakeSubsystem(int intakeID) {
     canBus = new CANBus("rio");
     intakeMotor = new TalonFX(intakeID, canBus);
+    intakeTempSignal = intakeMotor.getDeviceTemp();
+    intakeTempSignal.setUpdateFrequency(10);
 
 
     intakeVV = new VelocityVoltage(0).withSlot(0);
@@ -43,8 +48,8 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeConfig = new TalonFXConfiguration();
 
     intakeConfig.Slot0.kS = 0.1; // Add 0.1 V output to overcome static friction
-    intakeConfig.Slot0.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
-    intakeConfig.Slot0.kP = 0.11; // An error of 1 rps results in 0.11 V output
+    intakeConfig.Slot0.kV = 0.06; // A velocity target of 1 rps results in 0.12 V output
+    intakeConfig.Slot0.kP = 0.05; // An error of 1 rps results in 0.11 V output
     intakeConfig.Slot0.kI = 0; // no output for integrated error
     intakeConfig.Slot0.kD = 0; // no output for error derivative
 
@@ -61,6 +66,10 @@ public class IntakeSubsystem extends SubsystemBase {
 
     intakeMotor.setPosition(0);
 
+    SmartDashboard.setDefaultNumber(this.getName() + " Intake Target RPS", 0);
+    SmartDashboard.setDefaultNumber(this.getName() + " Intake Actual RPS", 0);
+    SmartDashboard.setDefaultBoolean(this.getName() + " Control Mode", false);
+    
     SmartDashboard.setDefaultNumber(this.getName() + " Intake Temperature", 0);
   }
 
@@ -81,18 +90,26 @@ public class IntakeSubsystem extends SubsystemBase {
   }
   @Override
   public void periodic() {
-    SmartDashboard.putNumber(this.getName() + " Intake Temperature", intakeMotor.getDeviceTemp().getValueAsDouble());
+    intakeTempSignal.refresh();
+    double intakeTemp = intakeTempSignal.getValueAsDouble();
 
-    double intakeTemp = intakeMotor.getDeviceTemp().getValueAsDouble();
+    SmartDashboard.putNumber(this.getName() + " Intake Temperature", intakeTemp);
+
     if (intakeTemp > 75) intakeOverTemp = true;
     if (intakeTemp < 65) intakeOverTemp = false;
 
     if (intakeOverTemp){
       intakeMotor.setControl(new NeutralOut());
     }
+
+    
 }
 
   @Override
   public void simulationPeriodic() {
+    SmartDashboard.putNumber(this.getName() + " Intake Actual RPS", intakeMotor.getVelocity().getValueAsDouble());
+    if (SmartDashboard.getBoolean(this.getName() + " Control Mode", false)){
+        setIntakeSpeed(SmartDashboard.getNumber(this.getName() + " Intake Target RPS", 0));
+    }
   }
 }

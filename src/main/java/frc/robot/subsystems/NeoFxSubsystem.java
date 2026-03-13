@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.signals.InvertedValue;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -23,7 +24,7 @@ public class NeoFxSubsystem extends SubsystemBase {
     private final SparkClosedLoopController neoFXClosedLoopController;
     private final RelativeEncoder neoFXRelativeEncoder;
 
-    private final double gearRatio = 1.00; //Don't forget to change Elastic to New Max and Min Speeds (5767.0 / gearRatio)
+    private final double gearRatio = 3.00; //Don't forget to change Elastic to New Max and Min Speeds (5767.0 / gearRatio)
 
     public NeoFxSubsystem(int neoFXID) {
         neoFXMotor = new SparkMax(neoFXID, MotorType.kBrushless);
@@ -32,30 +33,30 @@ public class NeoFxSubsystem extends SubsystemBase {
 
         neoFXConfig = new SparkMaxConfig();
 
+        neoFXConfig.inverted(true);
+
         neoFXConfig.encoder
             .positionConversionFactor(1.0 / gearRatio)
-            .velocityConversionFactor(1.0 / gearRatio);
+            .velocityConversionFactor((1.0 / gearRatio) / 60.0);
 
         neoFXConfig.closedLoop
             .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-            .p(0.1)
-            .i(0)
-            .d(0)
-            .outputRange(-1, 1)
-            // We don't need to pass a closed loop slot, as it will default to slot 0.
-            .p(0.0001, ClosedLoopSlot.kSlot1)
+            .p(0.002, ClosedLoopSlot.kSlot1)
             .i(0, ClosedLoopSlot.kSlot1)
             .d(0, ClosedLoopSlot.kSlot1)
             .outputRange(-1, 1, ClosedLoopSlot.kSlot1)
             .feedForward
-                // kV is now in Volts, so we multiply by the nominal voltage (12V)
-                .kV(12.0 / 5767, ClosedLoopSlot.kSlot1);
+                .kV(12.0 / 32.0, ClosedLoopSlot.kSlot1);   // correct for 3:1
+                
+        neoFXMotor.configure(
+            neoFXConfig,
+            ResetMode.kResetSafeParameters,
+            PersistMode.kNoPersistParameters
+        );
 
-            neoFXMotor.configure(
-                neoFXConfig, 
-                ResetMode.kResetSafeParameters, 
-                PersistMode.kNoPersistParameters
-            );
+
+            SmartDashboard.setDefaultNumber(this.getName() + " Neo Actual Speed", 0);
+            SmartDashboard.setDefaultNumber(this.getName() + " Neo Target Speed", 0);
     }
 
     public void setNeoFXPosition(double position) {
@@ -77,19 +78,18 @@ public class NeoFxSubsystem extends SubsystemBase {
     }
 
     public Command setNeoFXPositionCommand(double position) {
-        return startEnd(
-           () -> setNeoFXVelocity(position),
-           () -> setNeoFXVelocity(0));
+        return new InstantCommand( () -> setNeoFXPosition(position), this);
     }
 
     public Command setNeoFXVelocityCommand(double velocity) {
-        return startEnd(
-           () -> setNeoFXVelocity(velocity),
-           () -> setNeoFXVelocity(0));
+        return new InstantCommand(() -> setNeoFXVelocity(velocity), this);
     }
 
     @Override
     public void periodic() {
+        SmartDashboard.putNumber(this.getName() + " Neo Actual Speed", neoFXRelativeEncoder.getVelocity());
+        SmartDashboard.putNumber("Neo Output", neoFXMotor.getAppliedOutput());
 
+        // setNeoFXVelocity(SmartDashboard.getNumber(this.getName() + " Neo Target Speed", 0));
     }
 }

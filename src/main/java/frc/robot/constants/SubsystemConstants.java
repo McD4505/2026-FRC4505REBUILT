@@ -17,6 +17,11 @@ public class SubsystemConstants {
     Map.entry(3.11, 50.0), Map.entry(3.32, 52.0), Map.entry(3.85, 55.0), Map.entry(4.21, 57.0),
     Map.entry(5.09, 70.0));
 
+    // ------ SHOOOTING CONSTANTS ------
+    public static final int INDEXER_SHOOT_RPS = 100;
+    public static final double PASS_OFFSET = 10;
+    public static final int INTAKE_SHOOT_RPS = 100;
+
     public static class DrivetrainConstants {
         public static final double WHEEL_COF = 1.1;
         public static final double MAX_DRIVE_SPEED = 10; // TODO: this needs to be tested
