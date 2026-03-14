@@ -5,6 +5,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+
 import java.lang.annotation.Target;
 import java.time.Period;
 
@@ -70,6 +72,10 @@ public class RevSubsystem extends SubsystemBase{
             .feedForward
             // kV is now in Volts, so we multiply by the nominal voltage (12V)
             .kV(12.0 / 5767, ClosedLoopSlot.kSlot1);
+        // motorConfig.closedLoop.maxMotion
+        //     .cruiseVelocity(1)     // units per second
+        //     .maxAcceleration(0.5) // units per second^2
+        //     .allowedProfileError(0.02);
 
         // /*
         // * Apply the configuration to the SPARK MAX.
@@ -92,22 +98,30 @@ public class RevSubsystem extends SubsystemBase{
         SmartDashboard.setDefaultNumber("Actual Velocity", 0);
     }
 
-    public Command setMotorVelocity(double velocity){
-        SmartDashboard.putBoolean("Control Mode", true);
-        return new InstantCommand(() -> SmartDashboard.putNumber("Target Velocity", velocity), this);
-    }
+    // public Command setMotorVelocity(double velocity){
+    //     SmartDashboard.putBoolean("Control Mode", true);
+    //     return new InstantCommand(() -> SmartDashboard.putNumber("Target Velocity", velocity), this);
+    // }
 
     // public Command setMotorPosition(double position){
     //     SmartDashboard.putBoolean("Control Mode", false);
     //     return new InstantCommand(() -> SmartDashboard.putNumber("Target Position", position), this);
     // }
 
-    public void setMotorPosition(double position){
-        closedLoopController.setSetpoint(position, ControlType.kPosition, ClosedLoopSlot.kSlot0);
+    public void setMotorPosition(double Rotations){
+        closedLoopController.setSetpoint(Rotations, ControlType.kPosition, ClosedLoopSlot.kSlot0);
     }
 
-    public Command setMotorPositionCommand(double position){
-        return new InstantCommand(() -> setMotorPosition(position), this);
+    public void setMotorVelocity(double RotationsPerSecond){
+        closedLoopController.setSetpoint(RotationsPerSecond, ControlType.kVelocity, ClosedLoopSlot.kSlot1);
+    }
+
+    public Command setMotorPositionCommand(double Rotations){
+        return new InstantCommand(() -> setMotorPosition(Rotations), this);
+    }
+
+    public Command setMotorVelocityCommand(double RotationsPerSecond){
+        return new InstantCommand(() -> setMotorVelocity(RotationsPerSecond), this);
     }
 
     public Command setMotorPercent(double val) {

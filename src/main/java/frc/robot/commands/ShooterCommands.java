@@ -1,7 +1,6 @@
 package frc.robot.commands;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
-import frc.robot.subsystems.NeoFxSubsystem;
 import frc.robot.subsystems.RevSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
 import edu.wpi.first.math.geometry.Pose2d;

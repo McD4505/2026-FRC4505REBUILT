@@ -35,11 +35,9 @@ import frc.robot.constants.ORTunerConstants;
 
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
-import frc.robot.subsystems.NeoFxSubsystem;
 import frc.robot.subsystems.RevSubsystem;
 import frc.robot.subsystems.TalonFXSubsystem;
 import frc.robot.subsystems.ConveyorSubsystem;
-import frc.robot.subsystems.ExtenderSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.subsystems.Vision;
 
@@ -60,45 +58,38 @@ public class RobotContainer {
 
     private final CommandXboxController joystick = new CommandXboxController(0);
 
-    // public final CommandSwerveDrivetrain drivetrain = PRTunerConstants.createDrivetrain();
-    public final CommandSwerveDrivetrain drivetrain = ORTunerConstants.createDrivetrain();
-
-
-    
     private final SendableChooser<Command> autoChooser;
+
+    public final CommandSwerveDrivetrain drivetrain = ORTunerConstants.createDrivetrain();
+    // public final CommandSwerveDrivetrain drivetrain = PRTunerConstants.createDrivetrain();
 
     public final Vision vision = new Vision(drivetrain::addVisionMeasurement, drivetrain::getPose);
 
-    // private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
-    // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
-
     private final IntakeSubsystem intake = new IntakeSubsystem(52, true);
-
     private final IntakeSubsystem indexer = new IntakeSubsystem(0, false);
-    // private final NeoFxSubsystem indexer = new RevSubsystem(15);
 
     private final RevSubsystem extender = new RevSubsystem(4);
 
-    // private final IntakeSubsystem intake = new IntakeSubsystem(51); // Change IDs in code
-    // private final ConveyorSubsystem conveyor = new ConveyorSubsystem(52, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
     private final TurretSubsystem turret = new TurretSubsystem(54, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
 
     public RobotContainer() {
-        autoChooser = AutoBuilder.buildAutoChooser();
-        SmartDashboard.putData("Auto Chooser", autoChooser);
 
         NamedCommands.registerCommand(
             "intake",
-            intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS).withTimeout(5)
+            intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS).withTimeout(1)
         );
     
         NamedCommands.registerCommand( //shooting named command which runs the belt while running the turret
             "shoot",
-            ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY).withTimeout(5.0)
-            );
+            ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY)
+        );
+        
         NamedCommands.registerCommand(
             "extend",
-             extender.setMotorPercent(-0.3).withTimeout(5.0));
+             extender.setMotorPercent(-0.3).withTimeout(2)
+             );
+        autoChooser = AutoBuilder.buildAutoChooser();
+        SmartDashboard.putData("Auto Chooser", autoChooser);
 
         configureBindings();
     }
@@ -106,7 +97,7 @@ public class RobotContainer {
     private void configureBindings() {
 
 
-        joystick.y().onTrue(indexer.setIntakeSpeedCommand(60));
+        joystick.y().onTrue(indexer.setIntakeSpeedCommand(80));
         joystick.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
         joystick.a().onTrue(turret.setTurretSpeedCommand(80));
@@ -124,6 +115,17 @@ public class RobotContainer {
 
         joystick.b().onTrue(indexer.setIntakeSpeedCommand(-60));
         joystick.b().onFalse(indexer.setIntakeSpeedCommand(0));
+
+        // Reset the field-centric heading on left bumper press.
+        joystick.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        joystick.povLeft().onTrue(extender.setMotorPercent(-0.1)); //rack and pin going down
+        joystick.povLeft().onFalse(extender.setMotorPercent(0));
+    
+
+        joystick.povUp().onTrue(extender.setMotorPercent(0.1)); //rack and pin going up
+        joystick.povUp().onFalse(extender.setMotorPercent(0));
+
+        joystick.povRight().onTrue(extender.setMotorPositionCommand(2));
 
 
         // Note that X is defined as forward according to WPILib convention,                                                                                                                                                                                                                                                                                                                ;/
@@ -146,14 +148,7 @@ public class RobotContainer {
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
 
-        // Reset the field-centric heading on left bumper press.
-        joystick.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
-        joystick.povLeft().onTrue(extender.setMotorPercent(-0.3)); //rack and pin going down
-        joystick.povLeft().onFalse(extender.setMotorPercent(0));
-    
-
-        joystick.povUp().onTrue(extender.setMotorPercent(0.3)); //rack and pin going up
-        joystick.povUp().onFalse(extender.setMotorPercent(0));
+        
         drivetrain.registerTelemetry(logger::telemeterize);
     }
 

@@ -3,13 +3,13 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 0.6632502965599059,
-        "y": 0.6727520759193351
+        "x": 0.6524911032028475,
+        "y": 0.5651601423487547
       },
       "prevControl": null,
       "nextControl": {
-        "x": 3.2684948086058734,
-        "y": 1.3708252390076663
+        "x": 3.257735615248815,
+        "y": 1.263233305437086
       },
       "isLocked": false,
       "linkedName": "intake_station"
@@ -48,7 +48,7 @@
   "folder": null,
   "idealStartingState": {
     "velocity": 0,
-    "rotation": 180.0
+    "rotation": 175.3141001604974
   },
   "useDefaultConstraints": true
 }
