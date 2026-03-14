@@ -123,7 +123,7 @@ public class TurretSubsystem extends SubsystemBase {
   }
 
   public Command setTurretSpeedCommand(double RotationsPerSecond){
-    return new InstantCommand(() -> setTurretSpeed(RotationsPerSecond)); 
+    return new InstantCommand(() -> setTurretSpeed(RotationsPerSecond), this); 
   }
 
   public Command setTurretSpeedCommand(double topTurretRotationsPerSecond, double bottomTurretRotationsPerSecond){

@@ -14,7 +14,7 @@ public class SubsystemConstants {
     // -------What it does--------
     // Mapping distance to rpm so use real robot testing to find rpm and distance
     public static final InterpolatingDoubleTreeMap SHOOTER_VELOCITY_LOOKUP = InterpolatingDoubleTreeMap.ofEntries(
-    Map.entry(3.11, 50.0), Map.entry(3.32, 52.0), Map.entry(3.85, 55.0), Map.entry(4.21, 57.0),
+    Map.entry(2.86, 42.31), Map.entry(2.30, 38.40), Map.entry(3.3, 46.08), Map.entry(3.96, 51.0),
     Map.entry(5.09, 70.0));
 
     // ------ SHOOOTING CONSTANTS ------

@@ -106,10 +106,10 @@ public class RobotContainer {
     private void configureBindings() {
 
 
-        joystick.y().onTrue(indexer.setIntakeSpeedCommand(40));
+        joystick.y().onTrue(indexer.setIntakeSpeedCommand(60));
         joystick.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
-        joystick.a().onTrue(turret.setTurretSpeedCommand(60));
+        joystick.a().onTrue(turret.setTurretSpeedCommand(80));
         joystick.a().onFalse(turret.setTurretSpeedCommand(0));
 
         joystick.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff
@@ -121,6 +121,9 @@ public class RobotContainer {
 
         joystick.rightBumper().whileTrue(ShooterCommands.passCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY));
         joystick.rightTrigger().whileTrue(ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY));
+
+        joystick.b().onTrue(indexer.setIntakeSpeedCommand(-60));
+        joystick.b().onFalse(indexer.setIntakeSpeedCommand(0));
 
 
         // Note that X is defined as forward according to WPILib convention,                                                                                                                                                                                                                                                                                                                ;/
@@ -146,6 +149,8 @@ public class RobotContainer {
         // Reset the field-centric heading on left bumper press.
         joystick.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
         joystick.povLeft().onTrue(extender.setMotorPercent(-0.3)); //rack and pin going down
+        joystick.povLeft().onFalse(extender.setMotorPercent(0));
+    
 
         joystick.povUp().onTrue(extender.setMotorPercent(0.3)); //rack and pin going up
         joystick.povUp().onFalse(extender.setMotorPercent(0));
