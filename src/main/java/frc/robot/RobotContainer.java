@@ -72,12 +72,12 @@ public class RobotContainer {
     // private final TurretSubsystem turret = new TurretSubsystem(1, 15); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
     // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
 
-    private final IntakeSubsystem intake = new IntakeSubsystem(52);
+    private final IntakeSubsystem intake = new IntakeSubsystem(52, true);
 
-    private final RevSubsystem indexer = new RevSubsystem(15);
+    private final IntakeSubsystem indexer = new IntakeSubsystem(0, false);
     // private final NeoFxSubsystem indexer = new RevSubsystem(15);
 
-    private final ExtenderSubsystem extender = new ExtenderSubsystem(4);
+    private final RevSubsystem extender = new RevSubsystem(4);
 
     // private final IntakeSubsystem intake = new IntakeSubsystem(51); // Change IDs in code
     // private final ConveyorSubsystem conveyor = new ConveyorSubsystem(52, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
@@ -101,8 +101,8 @@ public class RobotContainer {
     private void configureBindings() {
 
 
-        joystick.y().onTrue(indexer.setMotorVoltage(0.6));
-        joystick.y().onFalse(indexer.setMotorVelocity(0));
+        joystick.y().onTrue(indexer.setIntakeSpeedCommand(30));
+        joystick.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
         joystick.a().onTrue(turret.setTurretSpeedCommand(40));
         joystick.a().onFalse(turret.setTurretSpeedCommand(0));
@@ -140,8 +140,8 @@ public class RobotContainer {
 
         // Reset the field-centric heading on left bumper press.
         joystick.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
-        joystick.povUp().onTrue(extender.setNeoFXPositionCommand(3));
-
+        joystick.povUp().onTrue(extender.setMotorPercent(0.3));
+        joystick.povUp().onFalse(extender.setMotorPercent(0));
         drivetrain.registerTelemetry(logger::telemeterize);
     }
 

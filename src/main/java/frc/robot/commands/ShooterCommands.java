@@ -23,7 +23,7 @@ import java.util.function.DoubleSupplier;
 public class ShooterCommands {
     public static Command teleHalfShooterCommand(
         TurretSubsystem shooter,
-        RevSubsystem indexer,
+        IntakeSubsystem indexer,
         CommandSwerveDrivetrain drive,
         DoubleSupplier joystickX,
         DoubleSupplier joystickY
@@ -37,7 +37,7 @@ public class ShooterCommands {
 
     public static Command setDesiredShootingStates(
         TurretSubsystem shooter,
-        RevSubsystem indexer,
+        IntakeSubsystem indexer,
         CommandSwerveDrivetrain drive,
         boolean isShoot
         ) {
@@ -68,14 +68,14 @@ public class ShooterCommands {
                 SmartDashboard.putNumber("targetRPSVariable" , targetRPS);
                 // boolean aimed = drive.isAimedAt(HUB_LOCATION.getTranslation());
                 if (spinReady) {
-                    indexer.setMotorVoltage(-0.4);
+                    indexer.setIntakeSpeed(-0.4);
                 } else {
-                    indexer.setMotorVoltage(0);
+                    indexer.setIntakeSpeed(0);
                 }
             },
             () -> {
                 shooter.setTurretSpeed(0);
-                indexer.setMotorVoltage(0);
+                indexer.setIntakeSpeed(0);
             },
             shooter,
             indexer
@@ -84,7 +84,7 @@ public class ShooterCommands {
 
     public static Command passCommand(
         TurretSubsystem shooter,
-        RevSubsystem indexer,
+        IntakeSubsystem indexer,
         CommandSwerveDrivetrain drive,
         DoubleSupplier joystickX,
         DoubleSupplier joystickY

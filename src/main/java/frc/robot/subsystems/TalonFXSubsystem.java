@@ -14,6 +14,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.units.Units;
+import edu.wpi.first.wpilibj.motorcontrol.Talon;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -56,11 +57,11 @@ public class TalonFXSubsystem extends SubsystemBase {
 
     talonFX.setPosition(0);
 
-    SmartDashboard.setDefaultNumber("TalonFX Actual RPS", 0);
-    SmartDashboard.setDefaultNumber("TalonFX Target RPS", 0);
-    SmartDashboard.setDefaultBoolean("Stop TalonFX", false);
+    SmartDashboard.setDefaultNumber("Device ID: " + talonFX.getDeviceID() + " Actual RPS", 0);
+    SmartDashboard.setDefaultNumber("Device ID: " + talonFX.getDeviceID() + " Target RPS", 0);
+    SmartDashboard.setDefaultBoolean("Stop Device ID: " + talonFX.getDeviceID(), false);
 
-    SmartDashboard.setDefaultNumber(this.getName() + " TalonFX Temperature", 0);
+    SmartDashboard.setDefaultNumber("Device ID: " + talonFX.getDeviceID() + " Temperature C", 0);
   }
 
   public void setTalonFXSpeed(double RotationsPerSecond){
@@ -77,15 +78,16 @@ public class TalonFXSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    SmartDashboard.putNumber("TalonFX Actual RPS", talonFX.getVelocity().getValue().in(Units.RotationsPerSecond));
-    if (SmartDashboard.getBoolean("Stop TalonFX", false)) {
-      SmartDashboard.putBoolean("Stop TalonFX", false);
-      SmartDashboard.putNumber("TalonFX Target RPS", 0);
+    SmartDashboard.putNumber("Device ID: " + talonFX.getDeviceID() + " Actual RPS", talonFX.getVelocity().getValue().in(Units.RotationsPerSecond));
+    if (SmartDashboard.getBoolean("Stop Device ID: " + talonFX.getDeviceID(), false)) {
+      SmartDashboard.putBoolean("Stop Device ID: " + talonFX.getDeviceID(), false);
+      SmartDashboard.putNumber("Device ID: " + talonFX.getDeviceID() + " Target RPS", 0);
     }
-    double targetRPS = SmartDashboard.getNumber("TalonFX Target RPS", 0);
+
+    double targetRPS = SmartDashboard.getNumber("Device ID: " + talonFX.getDeviceID() + " Target RPS", 0);
     setTalonFXSpeed(targetRPS);
 
-    SmartDashboard.putNumber(this.getName() + " TalonFX Temperature", talonFX.getDeviceTemp().getValueAsDouble());
+    SmartDashboard.putNumber("Device ID: " + talonFX.getDeviceID() + " Temperature C", talonFX.getDeviceTemp().getValueAsDouble());
 
     double talonFXTemp = talonFX.getDeviceTemp().getValueAsDouble();
     if (talonFXTemp > 75) talonFXOverTemp = true;

@@ -35,7 +35,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
   private boolean intakeOverTemp;
 
-  public IntakeSubsystem(int intakeID) {
+  public IntakeSubsystem(int intakeID, boolean inverted) {
     canBus = new CANBus("rio");
     intakeMotor = new TalonFX(intakeID, canBus);
     intakeTempSignal = intakeMotor.getDeviceTemp();
@@ -52,8 +52,11 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeConfig.Slot0.kP = 0.05; // An error of 1 rps results in 0.11 V output
     intakeConfig.Slot0.kI = 0; // no output for integrated error
     intakeConfig.Slot0.kD = 0; // no output for error derivative
-
-    intakeConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    if (inverted) {
+      intakeConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    } else {
+      intakeConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    }
     intakeConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
     // enable supply and stator current limit
@@ -66,11 +69,11 @@ public class IntakeSubsystem extends SubsystemBase {
 
     intakeMotor.setPosition(0);
 
-    SmartDashboard.setDefaultNumber(this.getName() + " Intake Target RPS", 0);
-    SmartDashboard.setDefaultNumber(this.getName() + " Intake Actual RPS", 0);
-    SmartDashboard.setDefaultBoolean(this.getName() + " Control Mode", false);
+    SmartDashboard.setDefaultNumber("Device ID: " + intakeMotor.getDeviceID() + " Target RPS", 0);
+    SmartDashboard.setDefaultNumber("Device ID: " + intakeMotor.getDeviceID() + " Actual RPS", 0);
+    SmartDashboard.setDefaultBoolean("Device ID: " + intakeMotor.getDeviceID() + " Control Mode", false);
     
-    SmartDashboard.setDefaultNumber(this.getName() + " Intake Temperature", 0);
+    SmartDashboard.setDefaultNumber("Device ID: " + intakeMotor.getDeviceID() +  " Temperature", 0);
   }
 
   public void setIntakeSpeed(double RotationsPerSecond){
@@ -92,8 +95,7 @@ public class IntakeSubsystem extends SubsystemBase {
   public void periodic() {
     intakeTempSignal.refresh();
     double intakeTemp = intakeTempSignal.getValueAsDouble();
-
-    SmartDashboard.putNumber(this.getName() + " Intake Temperature", intakeTemp);
+    SmartDashboard.putNumber("Device ID: " + intakeMotor.getDeviceID() +  " Temperature", intakeMotor.getDeviceTemp().getValueAsDouble());
 
     if (intakeTemp > 75) intakeOverTemp = true;
     if (intakeTemp < 65) intakeOverTemp = false;
@@ -101,15 +103,5 @@ public class IntakeSubsystem extends SubsystemBase {
     if (intakeOverTemp){
       intakeMotor.setControl(new NeutralOut());
     }
-
-    
-}
-
-  @Override
-  public void simulationPeriodic() {
-    SmartDashboard.putNumber(this.getName() + " Intake Actual RPS", intakeMotor.getVelocity().getValueAsDouble());
-    if (SmartDashboard.getBoolean(this.getName() + " Control Mode", false)){
-        setIntakeSpeed(SmartDashboard.getNumber(this.getName() + " Intake Target RPS", 0));
-    }
-  }
+  } 
 }

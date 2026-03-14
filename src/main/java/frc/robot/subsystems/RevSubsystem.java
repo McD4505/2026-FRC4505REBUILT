@@ -99,9 +99,12 @@ public class RevSubsystem extends SubsystemBase{
         return new InstantCommand(() -> SmartDashboard.putNumber("Target Position", position), this);
     }
 
-    public Command setMotorVoltage(double val) {
+    public Command setMotorPercent(double val) {
         return run(() -> motor.set(val));
     }
+    // public void setMotorPercent(double val) {
+    //     motor.set(val);
+    // }
 
     @Override
     public void periodic(){
