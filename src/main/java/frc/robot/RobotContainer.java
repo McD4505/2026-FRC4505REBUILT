@@ -36,6 +36,7 @@ import frc.robot.constants.ORTunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.NeoFxSubsystem;
+import frc.robot.subsystems.RevSubsystem;
 import frc.robot.subsystems.TalonFXSubsystem;
 import frc.robot.subsystems.ConveyorSubsystem;
 import frc.robot.subsystems.ExtenderSubsystem;
@@ -72,7 +73,10 @@ public class RobotContainer {
     // private final IntakeSubsystem intake = new IntakeSubsystem(2); // You can check the IDs of NEO motors by connecting to their CAN with USB C and opening REV Hardware Client
 
     private final IntakeSubsystem intake = new IntakeSubsystem(52);
-    private final NeoFxSubsystem indexer = new NeoFxSubsystem(15);
+
+    private final RevSubsystem indexer = new RevSubsystem(15);
+    // private final NeoFxSubsystem indexer = new RevSubsystem(15);
+
     private final ExtenderSubsystem extender = new ExtenderSubsystem(4);
 
     // private final IntakeSubsystem intake = new IntakeSubsystem(51); // Change IDs in code
@@ -97,15 +101,17 @@ public class RobotContainer {
     private void configureBindings() {
 
 
-        joystick.y().onTrue(indexer.setNeoFXVelocityCommand(INDEXER_SHOOT_RPS));
-        joystick.y().onFalse(indexer.setNeoFXVelocityCommand(0));
+        joystick.y().onTrue(indexer.setMotorVoltage(0.6));
+        joystick.y().onFalse(indexer.setMotorVelocity(0));
+
+        joystick.a().onTrue(turret.setTurretSpeedCommand(40));
+        joystick.a().onFalse(turret.setTurretSpeedCommand(0));
 
         joystick.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff
         joystick.leftTrigger().onFalse(intake.setIntakeSpeedCommand(0));
 
         joystick.leftBumper().onTrue(intake.setIntakeSpeedCommand(-INTAKE_SHOOT_RPS)); //push stuff out of the intake
         joystick.leftBumper().onFalse(intake.setIntakeSpeedCommand(0));
-
 
 
         joystick.rightBumper().whileTrue(ShooterCommands.passCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY));
@@ -134,8 +140,7 @@ public class RobotContainer {
 
         // Reset the field-centric heading on left bumper press.
         joystick.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
-        joystick.povUp().onTrue(extender.setNeoFXVelocityCommand(20));
-        joystick.povUp().onFalse(extender.setNeoFXVelocityCommand(0));
+        joystick.povUp().onTrue(extender.setNeoFXPositionCommand(3));
 
         drivetrain.registerTelemetry(logger::telemeterize);
     }

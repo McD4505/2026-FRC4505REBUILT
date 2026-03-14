@@ -10,6 +10,7 @@ import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -30,24 +31,38 @@ public class NeoFxSubsystem extends SubsystemBase {
         neoFXMotor = new SparkMax(neoFXID, MotorType.kBrushless);
         neoFXClosedLoopController = neoFXMotor.getClosedLoopController();
         neoFXRelativeEncoder = neoFXMotor.getEncoder();
+        
+
 
         neoFXConfig = new SparkMaxConfig();
+
+        
+        neoFXConfig.smartCurrentLimit(35);
+        neoFXConfig.closedLoopRampRate(0.2);
 
         neoFXConfig.inverted(true);
 
         neoFXConfig.encoder
-            .positionConversionFactor(1.0 / gearRatio)
-            .velocityConversionFactor((1.0 / gearRatio) / 60.0);
+            .positionConversionFactor(1.0)
+            .velocityConversionFactor(1.0);
 
         neoFXConfig.closedLoop
             .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-            .p(0.002, ClosedLoopSlot.kSlot1)
+            // Set PID values for position control. We don't need to pass a closed loop
+            // slot, as it will default to slot 0.
+            .p(0.1)
+            .i(0)
+            .d(0)
+            .outputRange(-1, 1)
+            // Set PID values for velocity control in slot 1
+            .p(0.0001, ClosedLoopSlot.kSlot1)
             .i(0, ClosedLoopSlot.kSlot1)
             .d(0, ClosedLoopSlot.kSlot1)
             .outputRange(-1, 1, ClosedLoopSlot.kSlot1)
             .feedForward
-                .kV(12.0 / 32.0, ClosedLoopSlot.kSlot1);   // correct for 3:1
-                
+            // kV is now in Volts, so we multiply by the nominal voltage (12V)
+            .kV(12.0 / 5767, ClosedLoopSlot.kSlot1);
+          
         neoFXMotor.configure(
             neoFXConfig,
             ResetMode.kResetSafeParameters,
@@ -82,7 +97,7 @@ public class NeoFxSubsystem extends SubsystemBase {
     }
 
     public Command setNeoFXVelocityCommand(double velocity) {
-        return run(() -> SmartDashboard.putNumber(this.getName() + " Target Speed", velocity));
+        return new InstantCommand(() -> SmartDashboard.putNumber(this.getName() + " Target Speed", velocity), this);
     }
 
     @Override

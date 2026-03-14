@@ -2,6 +2,7 @@ package frc.robot.commands;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.NeoFxSubsystem;
+import frc.robot.subsystems.RevSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -22,7 +23,7 @@ import java.util.function.DoubleSupplier;
 public class ShooterCommands {
     public static Command teleHalfShooterCommand(
         TurretSubsystem shooter,
-        NeoFxSubsystem indexer,
+        RevSubsystem indexer,
         CommandSwerveDrivetrain drive,
         DoubleSupplier joystickX,
         DoubleSupplier joystickY
@@ -36,7 +37,7 @@ public class ShooterCommands {
 
     public static Command setDesiredShootingStates(
         TurretSubsystem shooter,
-        NeoFxSubsystem indexer,
+        RevSubsystem indexer,
         CommandSwerveDrivetrain drive,
         boolean isShoot
         ) {
@@ -67,14 +68,14 @@ public class ShooterCommands {
                 SmartDashboard.putNumber("targetRPSVariable" , targetRPS);
                 // boolean aimed = drive.isAimedAt(HUB_LOCATION.getTranslation());
                 if (spinReady) {
-                    indexer.setNeoFXVelocity(INDEXER_SHOOT_RPS);
+                    indexer.setMotorVoltage(-0.4);
                 } else {
-                    indexer.setNeoFXVelocity(0);
+                    indexer.setMotorVoltage(0);
                 }
             },
             () -> {
                 shooter.setTurretSpeed(0);
-                indexer.setNeoFXVelocity(0);
+                indexer.setMotorVoltage(0);
             },
             shooter,
             indexer
@@ -83,7 +84,7 @@ public class ShooterCommands {
 
     public static Command passCommand(
         TurretSubsystem shooter,
-        NeoFxSubsystem indexer,
+        RevSubsystem indexer,
         CommandSwerveDrivetrain drive,
         DoubleSupplier joystickX,
         DoubleSupplier joystickY

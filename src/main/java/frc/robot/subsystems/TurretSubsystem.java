@@ -62,7 +62,7 @@ public class TurretSubsystem extends SubsystemBase {
 
     // enable supply and stator current limit
     topTurretConfig.CurrentLimits.SupplyCurrentLimit = 50;
-    topTurretConfig.CurrentLimits.StatorCurrentLimit = 80;
+    topTurretConfig.CurrentLimits.StatorCurrentLimit = 60;
     topTurretConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
     topTurretConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 

@@ -24,7 +24,6 @@ public class ExtenderSubsystem extends SubsystemBase {
     private final SparkClosedLoopController neoFXClosedLoopController;
     private final RelativeEncoder neoFXRelativeEncoder;
 
-    private final double gearRatio = 3.00; //Don't forget to change Elastic to New Max and Min Speeds (5767.0 / gearRatio)
 
     public ExtenderSubsystem(int neoFXID) {
         neoFXMotor = new SparkMax(neoFXID, MotorType.kBrushless);
@@ -36,8 +35,8 @@ public class ExtenderSubsystem extends SubsystemBase {
         neoFXConfig.inverted(true);
 
         neoFXConfig.encoder
-            .positionConversionFactor(1.0 / gearRatio)
-            .velocityConversionFactor((1.0 / gearRatio) / 60.0);
+            .positionConversionFactor(1)
+            .velocityConversionFactor(1);
 
         neoFXConfig.closedLoop
             .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
@@ -46,51 +45,36 @@ public class ExtenderSubsystem extends SubsystemBase {
             .d(0, ClosedLoopSlot.kSlot1)
             .outputRange(-1, 1, ClosedLoopSlot.kSlot1)
             .feedForward
-                .kV(12.0 / 32.0, ClosedLoopSlot.kSlot1);   // correct for 3:1
+                .kV(12.0 / 5767, ClosedLoopSlot.kSlot1);   // correct for 3:1
+            neoFXConfig.closedLoop.maxMotion
+            .cruiseVelocity(1)     // units per second
+            .maxAcceleration(0.5) // units per second^2
+            .allowedProfileError(0.02);
                 
         neoFXMotor.configure(
             neoFXConfig,
             ResetMode.kResetSafeParameters,
             PersistMode.kNoPersistParameters
         );
-
-
-            SmartDashboard.setDefaultNumber(this.getName() + " Actual Speed", 0);
-            SmartDashboard.setDefaultNumber(this.getName() + " Target Speed", 0);
     }
 
     public void setNeoFXPosition(double position) {
         neoFXClosedLoopController.setSetpoint(
             position,
-            ControlType.kPosition,
-            ClosedLoopSlot.kSlot0
-        );
-    }
-
-
-    
-    public void setNeoFXVelocity(double velocity) {
-        neoFXClosedLoopController.setSetpoint(
-            velocity,
-            ControlType.kVelocity,
+            ControlType.kMAXMotionPositionControl,
             ClosedLoopSlot.kSlot1
         );
     }
+
+
 
     public Command setNeoFXPositionCommand(double position) {
         return new InstantCommand( () -> setNeoFXPosition(position), this);
     }
 
-    public Command setNeoFXVelocityCommand(double velocity) {
-        return run(() -> SmartDashboard.putNumber(this.getName() + " Target Speed", velocity));
-    }
 
     @Override
     public void periodic() {
-
-        SmartDashboard.putNumber(this.getName() + " Actual Speed", neoFXRelativeEncoder.getVelocity());
-        SmartDashboard.putNumber(this.getName() + " Output", neoFXMotor.getAppliedOutput());
-
-        setNeoFXVelocity(SmartDashboard.getNumber(this.getName() + " Target Speed", 0));
+        SmartDashboard.putNumber("EXTENDER CURRENT POSITION", neoFXRelativeEncoder.getPosition());
     }
 }
