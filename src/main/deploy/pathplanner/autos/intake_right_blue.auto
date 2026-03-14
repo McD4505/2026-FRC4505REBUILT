@@ -9,6 +9,12 @@
           "data": {
             "commands": [
               {
+                "type": "named",
+                "data": {
+                  "name": "extend"
+                }
+              },
+              {
                 "type": "wait",
                 "data": {
                   "waitTime": 3.0
@@ -30,6 +36,12 @@
                 "type": "path",
                 "data": {
                   "pathName": "intake_to_scoring_pos"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "shoot"
                 }
               }
             ]

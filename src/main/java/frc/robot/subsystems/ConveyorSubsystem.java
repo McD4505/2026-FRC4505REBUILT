@@ -85,8 +85,8 @@ public class ConveyorSubsystem extends SubsystemBase {
 
     turretFeedMotor.setPosition(0);
 
-    SmartDashboard.setDefaultNumber("Device ID: " + beltMotor.getDeviceID() +  " Temperature", 0);
-    SmartDashboard.setDefaultNumber("Device ID: " + turretFeedMotor.getDeviceID() +  " Temperature", 0);
+    SmartDashboard.setDefaultNumber("Device ID: " + beltMotor.getDeviceID() +  " Temperature C", 0);
+    SmartDashboard.setDefaultNumber("Device ID: " + turretFeedMotor.getDeviceID() +  " Temperature C", 0);
   }
 
   public void setBeltSpeed(double RotationsPerSecond){
@@ -122,8 +122,8 @@ public class ConveyorSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    SmartDashboard.putNumber("Device ID: " + beltMotor.getDeviceID() +  " Temperature", beltMotor.getDeviceTemp().getValueAsDouble());
-    SmartDashboard.putNumber("Device ID: " + turretFeedMotor.getDeviceID() +  " Temperature", turretFeedMotor.getDeviceTemp().getValueAsDouble());
+    SmartDashboard.putNumber("Device ID: " + beltMotor.getDeviceID() +  " Temperature C", beltMotor.getDeviceTemp().getValueAsDouble());
+    SmartDashboard.putNumber("Device ID: " + turretFeedMotor.getDeviceID() +  " Temperature ", turretFeedMotor.getDeviceTemp().getValueAsDouble());
 
     double beltTemp = beltMotor.getDeviceTemp().getValueAsDouble();
     if (beltTemp > 75) beltOverTemp = true;

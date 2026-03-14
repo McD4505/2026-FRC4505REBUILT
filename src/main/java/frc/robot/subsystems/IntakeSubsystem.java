@@ -73,7 +73,7 @@ public class IntakeSubsystem extends SubsystemBase {
     SmartDashboard.setDefaultNumber("Device ID: " + intakeMotor.getDeviceID() + " Actual RPS", 0);
     SmartDashboard.setDefaultBoolean("Device ID: " + intakeMotor.getDeviceID() + " Control Mode", false);
     
-    SmartDashboard.setDefaultNumber("Device ID: " + intakeMotor.getDeviceID() +  " Temperature", 0);
+    SmartDashboard.setDefaultNumber("Device ID: " + intakeMotor.getDeviceID() +  " Temperature C", 0);
   }
 
   public void setIntakeSpeed(double RotationsPerSecond){
@@ -95,7 +95,7 @@ public class IntakeSubsystem extends SubsystemBase {
   public void periodic() {
     intakeTempSignal.refresh();
     double intakeTemp = intakeTempSignal.getValueAsDouble();
-    SmartDashboard.putNumber("Device ID: " + intakeMotor.getDeviceID() +  " Temperature", intakeMotor.getDeviceTemp().getValueAsDouble());
+    SmartDashboard.putNumber("Device ID: " + intakeMotor.getDeviceID() +  " Temperature C", intakeMotor.getDeviceTemp().getValueAsDouble());
 
     if (intakeTemp > 75) intakeOverTemp = true;
     if (intakeTemp < 65) intakeOverTemp = false;

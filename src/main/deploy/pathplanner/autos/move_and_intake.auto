@@ -5,13 +5,26 @@
     "data": {
       "commands": [
         {
-          "type": "parallel",
+          "type": "sequential",
           "data": {
             "commands": [
               {
-                "type": "path",
+                "type": "parallel",
                 "data": {
-                  "pathName": "move_and_intake"
+                  "commands": [
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "extend"
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "data": {
+                        "pathName": "move_and_intake"
+                      }
+                    }
+                  ]
                 }
               },
               {

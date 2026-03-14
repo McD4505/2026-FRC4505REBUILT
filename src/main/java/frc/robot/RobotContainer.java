@@ -87,24 +87,29 @@ public class RobotContainer {
         autoChooser = AutoBuilder.buildAutoChooser();
         SmartDashboard.putData("Auto Chooser", autoChooser);
 
-        // NamedCommands.registerCommand(
-        //     "intake",
-        //     intake.setIntakeSpeedCommand(5)
-        // );
-        // NamedCommands.registerCommand( //shooting named command which runs the belt while running the turret
-        //     "shoot",
-        //     ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY)
-        //     );
+        NamedCommands.registerCommand(
+            "intake",
+            intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS).withTimeout(5)
+        );
+    
+        NamedCommands.registerCommand( //shooting named command which runs the belt while running the turret
+            "shoot",
+            ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY).withTimeout(5.0)
+            );
+        NamedCommands.registerCommand(
+            "extend",
+             extender.setMotorPercent(-0.3).withTimeout(5.0));
+
         configureBindings();
     }
 
     private void configureBindings() {
 
 
-        joystick.y().onTrue(indexer.setIntakeSpeedCommand(30));
+        joystick.y().onTrue(indexer.setIntakeSpeedCommand(40));
         joystick.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
-        joystick.a().onTrue(turret.setTurretSpeedCommand(40));
+        joystick.a().onTrue(turret.setTurretSpeedCommand(60));
         joystick.a().onFalse(turret.setTurretSpeedCommand(0));
 
         joystick.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff
@@ -140,7 +145,9 @@ public class RobotContainer {
 
         // Reset the field-centric heading on left bumper press.
         joystick.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
-        joystick.povUp().onTrue(extender.setMotorPercent(0.3));
+        joystick.povLeft().onTrue(extender.setMotorPercent(-0.3)); //rack and pin going down
+
+        joystick.povUp().onTrue(extender.setMotorPercent(0.3)); //rack and pin going up
         joystick.povUp().onFalse(extender.setMotorPercent(0));
         drivetrain.registerTelemetry(logger::telemeterize);
     }
