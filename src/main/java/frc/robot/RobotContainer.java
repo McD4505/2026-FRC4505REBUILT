@@ -37,7 +37,7 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.RevSubsystem;
 import frc.robot.subsystems.TalonFXSubsystem;
-import frc.robot.subsystems.ConveyorSubsystem;
+
 import frc.robot.subsystems.TurretSubsystem;
 import frc.robot.subsystems.Vision;
 
@@ -97,10 +97,10 @@ public class RobotContainer {
     private void configureBindings() {
 
 
-        joystick.y().onTrue(indexer.setIntakeSpeedCommand(80));
+        joystick.y().onTrue(indexer.setIntakeSpeedCommand(60));
         joystick.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
-        joystick.a().onTrue(turret.setTurretSpeedCommand(80));
+        joystick.a().onTrue(turret.setTurretSpeedCommand(60));
         joystick.a().onFalse(turret.setTurretSpeedCommand(0));
 
         joystick.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff

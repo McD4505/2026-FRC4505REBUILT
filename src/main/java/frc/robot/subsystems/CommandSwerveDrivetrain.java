@@ -398,8 +398,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             double dx = target.getX() - pose.getX();
             double dy = target.getY() - pose.getY();
 
-            Rotation2d targetAngle = new Rotation2d(Math.atan2(dy, dx));
-
+            Rotation2d targetAngle = new Rotation2d(Math.atan2(dy, dx)+ Math.PI);
             // **Always read joystick values here**
             double xSpeed = -joystickY.getAsDouble() * MAX_DRIVE_SPEED;
             double ySpeed = -joystickX.getAsDouble() * MAX_DRIVE_SPEED;
@@ -432,6 +431,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
           SmartDashboard.putNumber("DistanceToHub", getDistanceToHub(DriverStation.getAlliance().orElse(Alliance.Blue)));
           SmartDashboard.putNumber("Heading", getState().Pose.getRotation().getDegrees());
+
     }
 
     private void startSimThread() {

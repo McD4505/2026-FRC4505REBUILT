@@ -61,7 +61,7 @@ public class ShooterCommands {
                 double targetRPS = SHOOTER_VELOCITY_LOOKUP.get(distance);
 
                 shooter.setTurretSpeed(targetRPS);
-                indexer.setIntakeSpeed(60);
+                indexer.setIntakeSpeed(80);
 
                 // boolean spinReady = shooter.atRPS(targetRPS-10);
                 // SmartDashboard.putBoolean("spinready", spinReady);

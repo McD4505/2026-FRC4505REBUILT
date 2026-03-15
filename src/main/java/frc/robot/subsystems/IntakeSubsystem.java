@@ -84,19 +84,9 @@ public class IntakeSubsystem extends SubsystemBase {
     }
   }
 
-  // // Bum Method :(
-  // public Command setIntakeSpeedCommand(double speed) {
-  //     return Commands.startEnd(
-  //         () -> setIntakeSpeed(speed),
-  //         () -> setIntakeSpeed(0),
-  //         this
-  //     );
-  // }
-
   public Command setIntakeSpeedCommand(double RotationsPerSecond){
     return new InstantCommand(() -> setIntakeSpeed(RotationsPerSecond), this);
   }
-
 
   @Override
   public void periodic() {
