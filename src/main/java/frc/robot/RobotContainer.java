@@ -100,7 +100,7 @@ public class RobotContainer {
         joystick.y().onTrue(indexer.setIntakeSpeedCommand(60));
         joystick.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
-        joystick.a().onTrue(turret.setTurretSpeedCommand(60));
+        joystick.a().onTrue(turret.setTurretSpeedCommand(50));
         joystick.a().onFalse(turret.setTurretSpeedCommand(0));
 
         joystick.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff
