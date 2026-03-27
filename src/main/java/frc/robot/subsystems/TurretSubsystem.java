@@ -78,7 +78,7 @@ public class TurretSubsystem extends SubsystemBase {
     bottomTurretConfig.Slot0.kI = 0; // no output for integrated error
     bottomTurretConfig.Slot0.kD = 0; // no output for error derivative
 
-    bottomTurretConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    bottomTurretConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     bottomTurretConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
     // enable supply and stator current limit

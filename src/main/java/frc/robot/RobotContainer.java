@@ -125,7 +125,7 @@ public class RobotContainer {
         xboxController.povUp().onTrue(extender.setMotorPercent(0.1)); //rack and pin going down
         xboxController.povUp().onFalse(extender.setMotorPercent(0));
 
-        xboxController.povRight().onTrue(extender.setMotorPositionCommand(2));
+        // xboxController.povRight().onTrue(extender.setMotorPositionCommand(2));
         //xboxController.x().onTrue()
 
 
