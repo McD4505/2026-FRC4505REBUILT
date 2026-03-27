@@ -261,4 +261,8 @@ public int getTagId() {
     public static interface EstimateConsumer {
         public void accept(Pose2d pose, double timestamp, Matrix<N3, N1> estimationStdDevs);
     }
+
+    // public bool detectBall(){
+    //     camera.
+    // }
 }

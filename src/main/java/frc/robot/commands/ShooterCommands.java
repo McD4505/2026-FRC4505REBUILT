@@ -58,20 +58,23 @@ public class ShooterCommands {
                     }
                 }
 
+                // Changes
+                // double avgVel = 
+
                 double targetRPS = SHOOTER_VELOCITY_LOOKUP.get(distance);
 
                 shooter.setTurretSpeed(targetRPS);
                 indexer.setIntakeSpeed(80);
 
-                // boolean spinReady = shooter.atRPS(targetRPS-10);
-                // SmartDashboard.putBoolean("spinready", spinReady);
-                // SmartDashboard.putNumber("targetRPSVariable" , targetRPS);
-                // // boolean aimed = drive.isAimedAt(HUB_LOCATION.getTranslation());
-                // if (spinReady) {
-                //     indexer.setIntakeSpeed(-0.4);
-                // } else {
-                //     indexer.setIntakeSpeed(0);
-                // }
+                boolean spinReady = shooter.atRPS(targetRPS-10);
+                SmartDashboard.putBoolean("spinready", spinReady);
+                SmartDashboard.putNumber("targetRPSVariable" , targetRPS);
+                // boolean aimed = drive.isAimedAt(HUB_LOCATION.getTranslation());
+                if (spinReady) {
+                    indexer.setIntakeSpeed(-0.4);
+                } else {
+                    indexer.setIntakeSpeed(0);
+                }
             },
             () -> {
                 shooter.setTurretSpeed(0);

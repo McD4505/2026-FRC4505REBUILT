@@ -15,6 +15,7 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
+import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -26,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.ShooterCommands;
 
@@ -56,7 +58,8 @@ public class RobotContainer {
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
-    private final CommandXboxController joystick = new CommandXboxController(0);
+    private final CommandXboxController xboxController = new CommandXboxController(0);
+    private final Joystick joystick = new Joystick(1);
 
     private final SendableChooser<Command> autoChooser;
 
@@ -66,7 +69,7 @@ public class RobotContainer {
     public final Vision vision = new Vision(drivetrain::addVisionMeasurement, drivetrain::getPose);
 
     private final IntakeSubsystem intake = new IntakeSubsystem(52, true);
-    private final IntakeSubsystem indexer = new IntakeSubsystem(0, false);
+    private final IntakeSubsystem indexer = new IntakeSubsystem(53, true);
 
     private final RevSubsystem extender = new RevSubsystem(4);
 
@@ -81,7 +84,7 @@ public class RobotContainer {
     
         NamedCommands.registerCommand( //shooting named command which runs the belt while running the turret
             "shoot",
-            ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY)
+            ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, xboxController::getLeftX, xboxController::getLeftY)
         );
         
         NamedCommands.registerCommand(
@@ -92,40 +95,38 @@ public class RobotContainer {
         SmartDashboard.putData("Auto Chooser", autoChooser);
 
         configureBindings();
+        configureLogitechBindings();
     }
 
     private void configureBindings() {
+        xboxController.y().onTrue(indexer.setIntakeSpeedCommand(100));
+        xboxController.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
+        xboxController.a().onTrue(turret.setTurretSpeedCommand(70));
+        xboxController.a().onFalse(turret.setTurretSpeedCommand(0));
 
-        joystick.y().onTrue(indexer.setIntakeSpeedCommand(60));
-        joystick.y().onFalse(indexer.setIntakeSpeedCommand(0));
+        xboxController.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff
+        xboxController.leftTrigger().onFalse(intake.setIntakeSpeedCommand(0));
 
-        joystick.a().onTrue(turret.setTurretSpeedCommand(50));
-        joystick.a().onFalse(turret.setTurretSpeedCommand(0));
+        xboxController.leftBumper().onTrue(intake.setIntakeSpeedCommand(-INTAKE_SHOOT_RPS)); //push stuff out of the intake
+        xboxController.leftBumper().onFalse(intake.setIntakeSpeedCommand(0));
 
-        joystick.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff
-        joystick.leftTrigger().onFalse(intake.setIntakeSpeedCommand(0));
+        xboxController.rightBumper().whileTrue(ShooterCommands.passCommand(turret, indexer, drivetrain, xboxController::getLeftX, xboxController::getLeftY));
+        xboxController.rightTrigger().whileTrue(ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, xboxController::getLeftX, xboxController::getLeftY));
 
-        joystick.leftBumper().onTrue(intake.setIntakeSpeedCommand(-INTAKE_SHOOT_RPS)); //push stuff out of the intake
-        joystick.leftBumper().onFalse(intake.setIntakeSpeedCommand(0));
-
-
-        joystick.rightBumper().whileTrue(ShooterCommands.passCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY));
-        joystick.rightTrigger().whileTrue(ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, joystick::getLeftX, joystick::getLeftY));
-
-        joystick.b().onTrue(indexer.setIntakeSpeedCommand(-60));
-        joystick.b().onFalse(indexer.setIntakeSpeedCommand(0));
+        xboxController.b().onTrue(indexer.setIntakeSpeedCommand(-60));
+        xboxController.b().onFalse(indexer.setIntakeSpeedCommand(0));
 
         // Reset the field-centric heading on left bumper press.
-        joystick.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
-        joystick.povLeft().onTrue(extender.setMotorPercent(-0.1)); //rack and pin going down
-        joystick.povLeft().onFalse(extender.setMotorPercent(0));
-    
+        xboxController.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        xboxController.povLeft().onTrue(extender.setMotorPercent(-0.1)); //rack and pin going up
+        xboxController.povLeft().onFalse(extender.setMotorPercent(0));
 
-        joystick.povUp().onTrue(extender.setMotorPercent(0.1)); //rack and pin going up
-        joystick.povUp().onFalse(extender.setMotorPercent(0));
+        xboxController.povUp().onTrue(extender.setMotorPercent(0.1)); //rack and pin going down
+        xboxController.povUp().onFalse(extender.setMotorPercent(0));
 
-        joystick.povRight().onTrue(extender.setMotorPositionCommand(2));
+        xboxController.povRight().onTrue(extender.setMotorPositionCommand(2));
+        //xboxController.x().onTrue()
 
 
         // Note that X is defined as forward according to WPILib convention,                                                                                                                                                                                                                                                                                                                ;/
@@ -133,9 +134,9 @@ public class RobotContainer {
         drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(-joystick.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-joystick.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-                    .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+                drive.withVelocityX(-xboxController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-xboxController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+                    .withRotationalRate(-xboxController.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
 
@@ -150,6 +151,28 @@ public class RobotContainer {
 
         
         drivetrain.registerTelemetry(logger::telemeterize);
+    }
+
+    private void configureLogitechBindings() {
+        double turretMaxSpeed = 50;
+        double intakeForwardSpeed = 100;
+        double intakeBackwardSpeed = -100;
+
+        Trigger button1Trigger = new Trigger(() -> joystick.getRawButton(1));
+        Trigger button2Trigger = new Trigger(() -> joystick.getRawButton(2));
+        Trigger button3Trigger = new Trigger(() -> joystick.getRawButton(3));
+ 
+        button1Trigger.whileTrue(
+            turret.run(() -> turret.setTurretSpeed(-turretMaxSpeed * joystick.getY()))
+        ).onFalse(
+            turret.run(() -> turret.setTurretSpeed(0))
+        );
+
+        button2Trigger.onTrue(intake.setIntakeSpeedCommand(intakeForwardSpeed));
+        button2Trigger.onFalse(intake.setIntakeSpeedCommand(0));
+
+        button3Trigger.onTrue(intake.setIntakeSpeedCommand(intakeBackwardSpeed));
+        button3Trigger.onFalse(intake.setIntakeSpeedCommand(0));
     }
 
     private Command pathFindToAprilTag() {
