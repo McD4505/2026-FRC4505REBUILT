@@ -125,7 +125,7 @@ public class RevSubsystem extends SubsystemBase{
     }
 
     public Command setMotorPercent(double val) {
-        return run(() -> motor.set(val));
+        return this.run(() -> motor.set(val));
     }
     // public void setMotorPercent(double val) {
     //     motor.set(val);

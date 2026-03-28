@@ -5,6 +5,12 @@
     "data": {
       "commands": [
         {
+          "type": "named",
+          "data": {
+            "name": "extend"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "middle_shoot"

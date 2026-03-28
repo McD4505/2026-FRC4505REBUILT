@@ -70,11 +70,8 @@ public class ShooterCommands {
                 SmartDashboard.putBoolean("spinready", spinReady);
                 SmartDashboard.putNumber("targetRPSVariable" , targetRPS);
                 // boolean aimed = drive.isAimedAt(HUB_LOCATION.getTranslation());
-                if (spinReady) {
-                    indexer.setIntakeSpeed(-0.4);
-                } else {
-                    indexer.setIntakeSpeed(0);
-                }
+
+                indexer.setIntakeSpeed(INDEXER_SHOOT_RPS);
             },
             () -> {
                 shooter.setTurretSpeed(0);

@@ -89,8 +89,10 @@ public class RobotContainer {
         
         NamedCommands.registerCommand(
             "extend",
-             extender.setMotorPercent(-0.3).withTimeout(2)
-             );
+            extender.setMotorPercent(0.1)
+                .withTimeout(3)
+                .andThen(extender.setMotorPercent(0))
+        );
         autoChooser = AutoBuilder.buildAutoChooser();
         SmartDashboard.putData("Auto Chooser", autoChooser);
 
@@ -105,7 +107,7 @@ public class RobotContainer {
         xboxController.a().onTrue(turret.setTurretSpeedCommand(70));
         xboxController.a().onFalse(turret.setTurretSpeedCommand(0));
 
-        xboxController.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //intake the stuff
+        xboxController.leftTrigger().onTrue(intake.setIntakeSpeedCommand(-60)); //reverse the indexer
         xboxController.leftTrigger().onFalse(intake.setIntakeSpeedCommand(0));
 
         xboxController.leftBumper().onTrue(intake.setIntakeSpeedCommand(-INTAKE_SHOOT_RPS)); //push stuff out of the intake
@@ -114,7 +116,7 @@ public class RobotContainer {
         xboxController.rightBumper().whileTrue(ShooterCommands.passCommand(turret, indexer, drivetrain, xboxController::getLeftX, xboxController::getLeftY));
         xboxController.rightTrigger().whileTrue(ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, xboxController::getLeftX, xboxController::getLeftY));
 
-        xboxController.b().onTrue(indexer.setIntakeSpeedCommand(-60));
+        xboxController.b().onTrue(indexer.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //run the indexer
         xboxController.b().onFalse(indexer.setIntakeSpeedCommand(0));
 
         // Reset the field-centric heading on left bumper press.
