@@ -101,13 +101,11 @@ public class RobotContainer {
     }
 
     private void configureBindings() {
-        xboxController.y().onTrue(indexer.setIntakeSpeedCommand(INDEXER_SHOOT_RPS));
-        xboxController.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
         xboxController.a().onTrue(turret.setTurretSpeedCommand(70));
         xboxController.a().onFalse(turret.setTurretSpeedCommand(0));
 
-        xboxController.leftTrigger().onTrue(intake.setIntakeSpeedCommand(-60)); //reverse the indexer
+        xboxController.leftTrigger().onTrue(intake.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //INTAKE
         xboxController.leftTrigger().onFalse(intake.setIntakeSpeedCommand(0));
 
         xboxController.leftBumper().onTrue(intake.setIntakeSpeedCommand(-INTAKE_SHOOT_RPS)); //push stuff out of the intake
@@ -116,8 +114,11 @@ public class RobotContainer {
         xboxController.rightBumper().whileTrue(ShooterCommands.passCommand(turret, indexer, drivetrain, xboxController::getLeftX, xboxController::getLeftY));
         xboxController.rightTrigger().whileTrue(ShooterCommands.teleHalfShooterCommand(turret, indexer, drivetrain, xboxController::getLeftX, xboxController::getLeftY));
 
-        xboxController.b().onTrue(indexer.setIntakeSpeedCommand(INTAKE_SHOOT_RPS)); //run the indexer
+        xboxController.b().onTrue(indexer.setIntakeSpeedCommand(INDEXER_SHOOT_RPS)); //run the indexer
         xboxController.b().onFalse(indexer.setIntakeSpeedCommand(0));
+
+        xboxController.y().onTrue(indexer.setIntakeSpeedCommand(-60)); //run indexer backwards
+        xboxController.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
         // Reset the field-centric heading on left bumper press.
         xboxController.povDown().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));

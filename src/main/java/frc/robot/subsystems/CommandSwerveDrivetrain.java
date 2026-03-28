@@ -121,7 +121,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         double dy = target.getY() - pose.getY();
         
         Optional<Alliance> alliance = DriverStation.getAlliance();
-        Rotation2d targetAngle = new Rotation2d(Math.atan2(dy, dx));
+        Rotation2d targetAngle = new Rotation2d(Math.atan2(dy, dx) + Math.PI);
 
 
         return targetAngle.minus(pose.getRotation()).getDegrees();
