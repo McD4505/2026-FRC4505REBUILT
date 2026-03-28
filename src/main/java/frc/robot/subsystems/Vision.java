@@ -57,8 +57,8 @@ public class Vision extends SubsystemBase{
     private final PhotonCamera camera2;
     private final PhotonPoseEstimator photonEstimator2;
 
-    private final PhotonCamera camera3;
-    private final PhotonPoseEstimator photonEstimator3;
+    // private final PhotonCamera camera3;
+    // private final PhotonPoseEstimator photonEstimator3;
 
 
     private Matrix<N3, N1> curStdDevs;
@@ -90,12 +90,12 @@ public class Vision extends SubsystemBase{
         this.camera2 = new PhotonCamera(kCameraName2);
         this.photonEstimator2 = new PhotonPoseEstimator(kTagLayout, kRobotToCam2);
 
-        this.camera3 = new PhotonCamera(kCameraName3);
-        this.photonEstimator3 = new PhotonPoseEstimator(kTagLayout, kRobotToCam3);
+        // this.camera3 = new PhotonCamera(kCameraName3);
+        // this.photonEstimator3 = new PhotonPoseEstimator(kTagLayout, kRobotToCam3);
 
 
-        cameras = new PhotonCamera[] {camera, camera2, camera3};
-        estimators = new PhotonPoseEstimator[] {photonEstimator, photonEstimator2, photonEstimator3};
+        cameras = new PhotonCamera[] {camera, camera2};
+        estimators = new PhotonPoseEstimator[] {photonEstimator, photonEstimator2};
 
         SmartDashboard.putData("Vision Field", visionField);
 

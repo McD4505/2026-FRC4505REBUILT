@@ -323,35 +323,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return pathfindingCommand;
     }
 
-    public Command pathfind(){
-        // Create a list of waypoints from poses. Each pose represents one waypoint.
-        // The rotation component of the pose should be the direction of travel. Do not use holonomic rotation.
-        List<Waypoint> waypoints = PathPlannerPath.waypointsFromPoses(
-            getState().Pose,
-            targetPose
-        );
-
-        // PathConstraints constraints = new PathConstraints(4.5, 3.0, 2*Math.PI, Math.PI); // The constraints for this path.
-        // PathConstraints constraints = PathConstraints.unlimitedConstraints(12.0); // You can also use unlimited constraints, only limited by motor torque and nominal battery voltage
-
-        PathPlannerPath path = new PathPlannerPath(
-            waypoints,
-            constraints,
-            null, // The ideal starting state, this is only relevant for pre-planned paths, so can be null for on-the-fly paths.
-            new GoalEndState(0.0, targetPose.getRotation()) // Goal end state. You can set a holonomic rotation here. If using a differential drivetrain, the rotation will have no effect.
-        
-        );
-
-        // Prevent the path from being flipped if the coordinates are already correct
-        path.preventFlipping = true;
-
-        // Since AutoBuilder is configured, we can use it to build pathfinding commands
-        Command pathfindingCommand = AutoBuilder.pathfindThenFollowPath(
-            path,
-            constraints
-        );
-        return pathfindingCommand;
-    }
 
     /**
      * Returns a command that applies the specified control request to this swerve drivetrain.
@@ -400,7 +371,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             double dx = target.getX() - pose.getX();
             double dy = target.getY() - pose.getY();
 
-            Rotation2d targetAngle = new Rotation2d(Math.atan2(dy, dx)+ Math.PI);
+            Rotation2d targetAngle = new Rotation2d(Math.atan2(dy, dx));
             // **Always read joystick values here**
             double xSpeed = -joystickY.getAsDouble() * MAX_DRIVE_SPEED;
             double ySpeed = -joystickX.getAsDouble() * MAX_DRIVE_SPEED;

@@ -29,6 +29,7 @@ public class ShooterCommands {
     ) {
         return new ParallelCommandGroup(
             // directly use the command returned by pointTowardsPoint
+
             drive.pointTowardsPoint(HUB_LOCATION.getTranslation(), joystickX, joystickY),
             setDesiredShootingStates(shooter, indexer, drive, true)
         );
