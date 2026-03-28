@@ -69,8 +69,8 @@ public class RobotContainer {
     public final Vision vision = new Vision(drivetrain::addVisionMeasurement, drivetrain::getPose);
 
     private final IntakeSubsystem intake = new IntakeSubsystem(52, true);
-    private final IntakeSubsystem indexer = new IntakeSubsystem(53, true);
-
+    private final IntakeSubsystem indexer = new IntakeSubsystem(53, false);
+    
     private final RevSubsystem extender = new RevSubsystem(4);
 
     private final TurretSubsystem turret = new TurretSubsystem(54, 55); // You can check the IDs of the Kraken motors and change spin direction by connecting to the Robot and opening Phoenix Tuner X
@@ -99,7 +99,7 @@ public class RobotContainer {
     }
 
     private void configureBindings() {
-        xboxController.y().onTrue(indexer.setIntakeSpeedCommand(100));
+        xboxController.y().onTrue(indexer.setIntakeSpeedCommand(INDEXER_SHOOT_RPS));
         xboxController.y().onFalse(indexer.setIntakeSpeedCommand(0));
 
         xboxController.a().onTrue(turret.setTurretSpeedCommand(70));

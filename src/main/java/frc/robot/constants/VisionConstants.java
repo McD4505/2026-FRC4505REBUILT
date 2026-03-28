@@ -70,7 +70,20 @@ public class VisionConstants {
                     Units.degreesToRadians(165)
                 )
             );
-
+        public static final String kCameraName3 = "AprilTagCamera3"; //front camera
+        public static final Transform3d kRobotToCam3 = 
+            new Transform3d(
+                new Translation3d(
+                    Units.inchesToMeters(12),
+                    Units.inchesToMeters(12),
+                    Units.inchesToMeters(0)
+                ),
+                new Rotation3d(
+                    0,
+                    Units.degreesToRadians(40),
+                    Units.degreesToRadians(45)
+                )
+            );
 
 
 
